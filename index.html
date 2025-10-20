@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medieval Catapult Siege</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body { 
+            overflow: hidden; 
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+        }
+        
+        canvas { 
+            display: block; 
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        #ui div {
+            margin: 5px 0;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+            border: 2px solid #8B4513;
+        }
+        
+        #controls-text {
+            font-size: 16px;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+        }
+        
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.7);
+        }
+        
+        #crosshair::before {
+            width: 2px;
+            height: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        #crosshair::after {
+            width: 30px;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            color: white;
+            text-align: center;
+            display: none;
+            border: 3px solid #FFD700;
+        }
+        
+        #game-over h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        
+        #game-over button {
+            font-size: 20px;
+            padding: 15px 40px;
+            margin-top: 20px;
+            background: #8B4513;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #game-over button:hover {
+            background: #A0522D;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading Medieval Catapult Siege...</div>
+    
+    <div id="ui">
+        <div>🎯 Targets: <span id="targets">0</span></div>
+        <div>💣 Ammo: <span id="ammo">10</span></div>
+        <div>⭐ Score: <span id="score">0</span></div>
+        <div>📊 Level: <span id="level">1</span></div>
+        <div>⚡ Power: <span id="power">15</span></div>
+        <div>📷 Camera: <span id="camera-preset">Behind Catapult</span></div>
+    </div>
+    
+    <div id="crosshair"></div>
+    
+    <div id="controls">
+        <div id="controls-text">
+            <div>⬆️⬇️⬅️➡️ Aim Catapult  •  [ ] Adjust Power  •  SPACE Fire</div>
+            <div style="margin-top: 5px; font-size: 14px; opacity: 0.9;">WASDQE Move Camera  •  Mouse Drag - Pan Camera   •  Z Cycle View</div>
+        </div>
+    </div>
+    
+    <div id="game-over">
+        <h1>Victory!</h1>
+        <p id="final-score">Final Score: 0</p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+

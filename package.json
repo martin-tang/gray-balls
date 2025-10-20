@@ -1,0 +1,19 @@
+{
+  "name": "medieval-catapult-siege",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A 3D browser-based medieval catapult siege game",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "cannon-es": "^0.20.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
+
