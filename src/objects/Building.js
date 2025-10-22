@@ -11,7 +11,47 @@ export class Building {
         this.body = null;
         this.isDestroyed = false;
         
+        // Material and hit points system
+        this.material = this.getMaterialType(buildingType);
+        this.maxHitPoints = this.getMaxHitPoints();
+        this.hitPoints = this.maxHitPoints;
+        this.damageThreshold = 20; // Minimum force required to damage
+        
         this.create();
+    }
+    
+    getMaterialType(buildingType) {
+        // Determine if building is wood or stone
+        switch(buildingType) {
+            case 'platform':
+                return 'wood';
+            case 'tower':
+            case 'wall':
+            case 'castle':
+                return 'stone';
+            default:
+                return 'wood';
+        }
+    }
+    
+    getMaxHitPoints() {
+        // Set hit points based on material and building type
+        const baseHP = {
+            'wood': 100,
+            'stone': 300
+        };
+        
+        const typeMultiplier = {
+            'platform': 0.8,
+            'wall': 1.0,
+            'tower': 1.5,
+            'castle': 3.0
+        };
+        
+        const base = baseHP[this.material] || 100;
+        const multiplier = typeMultiplier[this.buildingType] || 1.0;
+        
+        return base * multiplier;
     }
     
     create() {
@@ -120,6 +160,62 @@ export class Building {
         this.physicsWorld.addBody(this.body);
     }
     
+    takeDamage(impactForce) {
+        // Calculate damage based on impact force
+        if (impactForce < this.damageThreshold) {
+            return false; // No damage if below threshold
+        }
+        
+        // Calculate damage: force above threshold translates to damage
+        const damage = (impactForce - this.damageThreshold) * 2;
+        this.hitPoints -= damage;
+        
+        console.log(`💥 ${this.buildingType} (${this.material}) hit! Force: ${impactForce.toFixed(1)}, Damage: ${damage.toFixed(1)}, HP: ${this.hitPoints.toFixed(1)}/${this.maxHitPoints}`);
+        
+        // Visual feedback - change color based on damage
+        this.updateDamageVisuals();
+        
+        // Check if destroyed
+        if (this.hitPoints <= 0) {
+            this.destroy();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    updateDamageVisuals() {
+        if (this.isDestroyed) return;
+        
+        // Calculate health percentage
+        const healthPercent = this.hitPoints / this.maxHitPoints;
+        
+        // Get material(s) and update color based on damage
+        const updateMaterialColor = (material) => {
+            // Store original color if not already stored
+            if (!material.userData.originalColor) {
+                material.userData.originalColor = material.color.clone();
+            }
+            
+            // Interpolate towards darker/reddish color as damage increases
+            const originalColor = material.userData.originalColor;
+            const damageColor = new THREE.Color(0.6, 0.2, 0.1); // Dark reddish-brown for damage
+            
+            material.color.lerpColors(damageColor, originalColor, healthPercent);
+        };
+        
+        // Handle both single mesh and group (castle)
+        if (this.mesh.type === 'Group') {
+            this.mesh.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    updateMaterialColor(child.material);
+                }
+            });
+        } else if (this.mesh.material) {
+            updateMaterialColor(this.mesh.material);
+        }
+    }
+    
     update(deltaTime) {
         if (this.isDestroyed) return;
         
@@ -135,6 +231,8 @@ export class Building {
     
     destroy() {
         if (this.isDestroyed) return;
+        
+        console.log(`💀 ${this.buildingType} (${this.material}) destroyed!`);
         
         this.isDestroyed = true;
         this.scene.remove(this.mesh);

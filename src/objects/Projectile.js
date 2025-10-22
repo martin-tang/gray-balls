@@ -15,13 +15,65 @@ export class Projectile {
     }
     
     create(startPosition, velocity) {
-        // Visual
+        // Visual - Stone cannonball with texture
         const radius = 0.4;
-        const geometry = new THREE.SphereGeometry(radius, 16, 16);
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        
+        // Create stone texture for cannonball
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Base stone gray color
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Add stone texture variations
+        for (let i = 0; i < 2000; i++) {
+            const x = Math.random() * 256;
+            const y = Math.random() * 256;
+            const brightness = Math.random() * 40 - 20;
+            const gray = 74 + brightness;
+            ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
+            ctx.fillRect(x, y, 2, 2);
+        }
+        
+        // Add some darker spots and cracks
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * 256;
+            const y = Math.random() * 256;
+            const size = 5 + Math.random() * 10;
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+            gradient.addColorStop(0, 'rgba(30, 30, 30, 0.5)');
+            gradient.addColorStop(1, 'rgba(30, 30, 30, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add scratches/cracks
+        ctx.strokeStyle = 'rgba(20, 20, 20, 0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 30; i++) {
+            ctx.beginPath();
+            const x = Math.random() * 256;
+            const y = Math.random() * 256;
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + (Math.random() - 0.5) * 30, y + (Math.random() - 0.5) * 30);
+            ctx.stroke();
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x2a2a2a,
-            roughness: 0.8,
-            metalness: 0.2
+            map: texture,
+            color: 0xFFFFFF,
+            roughness: 0.95,
+            metalness: 0.1,
+            bumpMap: texture,
+            bumpScale: 0.02
         });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medieval Catapult Siege</title>
+    <title>Castle Crasher</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
         * { 
             margin: 0; 
@@ -136,10 +137,286 @@
             font-size: 24px;
             text-align: center;
         }
+        
+        /* Intro Screen Styles */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d3561 50%, #1a1a2e 100%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        #intro-screen.hidden {
+            display: none;
+        }
+        
+        .intro-content {
+            max-width: 765px;
+            width: 76.5%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #8B4513;
+            border-radius: 17px;
+            padding: 34px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            color: white;
+        }
+        
+        .intro-title {
+            font-size: 41px;
+            text-align: center;
+            margin-bottom: 8px;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            font-weight: bold;
+        }
+        
+        .intro-subtitle {
+            text-align: center;
+            font-size: 17px;
+            margin-bottom: 26px;
+            color: #B8B8B8;
+        }
+        
+        .controls-carousel {
+            position: relative;
+            overflow: hidden;
+            margin: 26px 0;
+            padding: 17px 0;
+        }
+        
+        .controls-container {
+            display: flex;
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .control-page {
+            min-width: 100%;
+            padding: 0 17px;
+            box-sizing: border-box;
+        }
+        
+        .control-section {
+            background: rgba(139, 69, 19, 0.3);
+            padding: 17px;
+            border-radius: 9px;
+            margin-bottom: 13px;
+        }
+        
+        .control-section h3 {
+            color: #FFD700;
+            margin-bottom: 13px;
+            font-size: 19px;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-item:last-child {
+            border-bottom: none;
+        }
+        
+        .control-key {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 13px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #FFD700;
+            min-width: 102px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .control-desc {
+            flex: 1;
+            margin-left: 17px;
+            color: #E0E0E0;
+            font-size: 14px;
+        }
+        
+        .carousel-nav {
+            display: flex;
+            justify-content: center;
+            gap: 13px;
+            margin: 17px 0;
+        }
+        
+        .carousel-btn {
+            background: rgba(139, 69, 19, 0.8);
+            border: 2px solid #8B4513;
+            color: white;
+            padding: 8px 26px;
+            border-radius: 9px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .carousel-btn:hover {
+            background: rgba(160, 82, 45, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .carousel-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 9px;
+            margin: 13px 0;
+        }
+        
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .dot.active {
+            background: #FFD700;
+            transform: scale(1.3);
+        }
+        
+        .start-button {
+            display: block;
+            margin: 26px auto 0;
+            padding: 13px 51px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            border: 3px solid #FFD700;
+            color: #FFD700;
+            border-radius: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+            transition: all 0.3s;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+        }
     </style>
 </head>
 <body>
-    <div id="loading">Loading Medieval Catapult Siege...</div>
+    <!-- Intro Screen -->
+    <div id="intro-screen">
+        <div class="intro-content">
+            <h1 class="intro-title">🏰 CASTLE CRASHER 🏰</h1>
+            <p class="intro-subtitle">Master the medieval catapult and destroy your targets!</p>
+            
+            <div class="controls-carousel">
+                <div class="controls-container" id="controls-container">
+                    <!-- Page 1: Basic Controls -->
+                    <div class="control-page">
+                        <div class="control-section">
+                            <h3>🎯 Catapult Controls</h3>
+                            <div class="control-item">
+                                <span class="control-key">⬆️ ⬇️</span>
+                                <span class="control-desc">Adjust vertical aim (pitch)</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">⬅️ ➡️</span>
+                                <span class="control-desc">Adjust horizontal aim (yaw)</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">[ ]</span>
+                                <span class="control-desc">Decrease / Increase power</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">SPACE</span>
+                                <span class="control-desc">Fire projectile</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Page 2: Camera Controls -->
+                    <div class="control-page">
+                        <div class="control-section">
+                            <h3>📷 Camera Controls</h3>
+                            <div class="control-item">
+                                <span class="control-key">W A S D</span>
+                                <span class="control-desc">Move camera (forward, left, back, right)</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">Q E</span>
+                                <span class="control-desc">Move camera down / up</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">Mouse Drag</span>
+                                <span class="control-desc">Pan and rotate camera view</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">Z</span>
+                                <span class="control-desc">Cycle through camera presets</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Page 3: Tips & Objectives -->
+                    <div class="control-page">
+                        <div class="control-section">
+                            <h3>💡 Tips & Objectives</h3>
+                            <div class="control-item">
+                                <span class="control-key">🎯</span>
+                                <span class="control-desc">Destroy all targets to complete the level</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">⚡</span>
+                                <span class="control-desc">Use trajectory preview to aim accurately</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">💣</span>
+                                <span class="control-desc">Limited ammo - make every shot count!</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">R</span>
+                                <span class="control-desc">Reset level if you get stuck</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">P</span>
+                                <span class="control-desc">Print camera position (debug)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="carousel-dots">
+                <span class="dot active" data-page="0"></span>
+                <span class="dot" data-page="1"></span>
+                <span class="dot" data-page="2"></span>
+            </div>
+            
+            <div class="carousel-nav">
+                <button class="carousel-btn" id="prev-btn" disabled>◀ Previous</button>
+                <button class="carousel-btn" id="next-btn">Next ▶</button>
+            </div>
+            
+            <button class="start-button" id="start-game">START GAME</button>
+        </div>
+    </div>
+    
+    <div id="loading">Loading Castle Crasher...</div>
     
     <div id="ui">
         <div>🎯 Targets: <span id="targets">0</span></div>
@@ -164,6 +441,79 @@
         <p id="final-score">Final Score: 0</p>
         <button onclick="location.reload()">Play Again</button>
     </div>
+    
+    <script>
+        // Intro Screen Carousel Logic
+        let currentPage = 0;
+        const totalPages = 3;
+        
+        const container = document.getElementById('controls-container');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const dots = document.querySelectorAll('.dot');
+        const startBtn = document.getElementById('start-game');
+        const introScreen = document.getElementById('intro-screen');
+        
+        function updateCarousel() {
+            // Slide animation
+            container.style.transform = `translateX(-${currentPage * 100}%)`;
+            
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPage);
+            });
+            
+            // Update button states
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage === totalPages - 1;
+        }
+        
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 0) {
+                currentPage--;
+                updateCarousel();
+            }
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                updateCarousel();
+            }
+        });
+        
+        // Dot navigation
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentPage = index;
+                updateCarousel();
+            });
+        });
+        
+        // Keyboard navigation for carousel
+        document.addEventListener('keydown', (e) => {
+            if (introScreen.classList.contains('hidden')) return;
+            
+            if (e.key === 'ArrowLeft' && currentPage > 0) {
+                currentPage--;
+                updateCarousel();
+            } else if (e.key === 'ArrowRight' && currentPage < totalPages - 1) {
+                currentPage++;
+                updateCarousel();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startGame();
+            }
+        });
+        
+        // Start game function
+        function startGame() {
+            introScreen.classList.add('hidden');
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        startBtn.addEventListener('click', startGame);
+    </script>
     
     <script type="module" src="/src/main.js"></script>
 </body>

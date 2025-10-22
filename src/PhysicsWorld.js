@@ -30,6 +30,64 @@ export class PhysicsWorld {
         
         this.world.addContactMaterial(groundObjectContact);
         this.world.addContactMaterial(projectileObjectContact);
+        
+        // Store collision callbacks
+        this.collisionCallbacks = [];
+        
+        // Set up collision event listeners
+        this.setupCollisionListeners();
+    }
+    
+    setupCollisionListeners() {
+        // Listen for collision events
+        this.world.addEventListener('beginContact', (event) => {
+            const bodyA = event.bodyA;
+            const bodyB = event.bodyB;
+            
+            // Check if one is a projectile and the other is an object
+            const isProjectileCollision = 
+                (bodyA.material === this.projectileMaterial && bodyB.material === this.objectMaterial) ||
+                (bodyB.material === this.projectileMaterial && bodyA.material === this.objectMaterial);
+            
+            if (isProjectileCollision) {
+                // Determine which is projectile and which is object
+                const projectileBody = bodyA.material === this.projectileMaterial ? bodyA : bodyB;
+                const objectBody = bodyA.material === this.projectileMaterial ? bodyB : bodyA;
+                
+                // Calculate impact force
+                const impactForce = this.calculateImpactForce(projectileBody, objectBody);
+                
+                // Notify all registered callbacks
+                this.collisionCallbacks.forEach(callback => {
+                    callback(projectileBody, objectBody, impactForce);
+                });
+            }
+        });
+    }
+    
+    calculateImpactForce(projectileBody, objectBody) {
+        // Get relative velocity at impact
+        const relativeVelocity = new CANNON.Vec3();
+        projectileBody.velocity.vsub(objectBody.velocity, relativeVelocity);
+        
+        // Calculate impact speed (magnitude of relative velocity)
+        const impactSpeed = relativeVelocity.length();
+        
+        // Calculate impact force using impulse approximation
+        // F = m * v (simplified, assumes collision happens over very short time)
+        // Using projectile's mass and relative velocity for force calculation
+        const projectileMass = projectileBody.mass;
+        const impactForce = projectileMass * impactSpeed;
+        
+        return impactForce;
+    }
+    
+    registerCollisionCallback(callback) {
+        this.collisionCallbacks.push(callback);
+    }
+    
+    clearCollisionCallbacks() {
+        this.collisionCallbacks = [];
     }
     
     step(deltaTime) {

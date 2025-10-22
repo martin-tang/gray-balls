@@ -5,7 +5,7 @@ export class TrajectoryPreview {
         this.scene = scene;
         this.points = [];
         this.line = null;
-        this.numPoints = 50;
+        this.numPoints = 120; // Increased from 50 for longer trajectory
         this.createLine();
     }
     
@@ -13,9 +13,9 @@ export class TrajectoryPreview {
         const geometry = new THREE.BufferGeometry();
         const material = new THREE.LineBasicMaterial({
             color: 0xffff00,
-            linewidth: 2,
+            linewidth: 2,   
             transparent: true,
-            opacity: 0.7
+            opacity: 1
         });
         
         // Initialize with empty points
@@ -29,7 +29,7 @@ export class TrajectoryPreview {
     
     update(startPos, velocity, gravity = 9.82) {
         const positions = this.line.geometry.attributes.position.array;
-        const timeStep = 0.05;
+        const timeStep = 0.08; // Increased from 0.05 for longer trajectory reach
         let hitGround = false;
         let validPoints = 0;
         

@@ -4,6 +4,7 @@ import { Catapult } from './Catapult.js';
 import { TrajectoryPreview } from './TrajectoryPreview.js';
 import { Level } from './Level.js';
 import { Projectile } from './objects/Projectile.js';
+import { ProceduralTextures } from './utils/ProceduralTextures.js';
 
 export class Game {
     constructor() {
@@ -43,21 +44,21 @@ export class Game {
         this.cameraPresets = [
             { 
                 name: "Behind Catapult",
-                position: new THREE.Vector3(-18, 8, 0),
-                angle: -0.1,
-                yaw: Math.PI / 2
+                position: new THREE.Vector3(-14.94, 7.01, 7.88),
+                angle: -0.35,
+                yaw: 2
             },
             { 
                 name: "Right Side View",
-                position: new THREE.Vector3(5, 10, 20),
-                angle: -0.2,
-                yaw: Math.PI
+                position: new THREE.Vector3(0.6, 8.93, 13.05),
+                angle: -0.58,
+                yaw: 2.93
             },
             { 
                 name: "Left Side View",
-                position: new THREE.Vector3(5, 10, -20),
-                angle: -0.2,
-                yaw: 0
+                position: new THREE.Vector3(-2.12, 10, -12.61),
+                angle: -0.51,
+                yaw: 0.19
             }
         ];
         this.currentPresetIndex = 0;
@@ -85,8 +86,8 @@ export class Game {
     init() {
         // Three.js setup
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
-        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+        this.scene.background = new THREE.Color(0x6BB6FF); // Cartoon bright blue
+        this.scene.fog = new THREE.Fog(0xB8E6FF, 80, 250); // Light airy fog
         
         // Camera - positioned behind catapult
         this.camera = new THREE.PerspectiveCamera(
@@ -113,6 +114,10 @@ export class Game {
         // Lighting
         this.setupLighting();
         
+        // Cartoon sky and clouds
+        this.createCartoonSky();
+        this.createCartoonClouds();
+        
         // Ground
         this.createGround();
         
@@ -137,13 +142,13 @@ export class Game {
     }
     
     setupLighting() {
-        // Ambient light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Brighter ambient light for cartoon style
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambientLight);
         
-        // Directional light (sun)
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sunLight.position.set(50, 50, 30);
+        // Softer directional light (sun)
+        const sunLight = new THREE.DirectionalLight(0xFFF4CC, 0.6); // Warm yellow
+        sunLight.position.set(50, 80, 30); // Higher in sky
         sunLight.castShadow = true;
         
         // Shadow camera setup
@@ -158,13 +163,13 @@ export class Game {
         
         this.scene.add(sunLight);
         
-        // Hemisphere light for better outdoor feel
-        const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x4a7c59, 0.4);
+        // Hemisphere light for cartoon outdoor feel
+        const hemiLight = new THREE.HemisphereLight(0xB8E6FF, 0x7BC850, 0.5); // Sky blue to grass green
         this.scene.add(hemiLight);
     }
     
     createGround() {
-        // Visual ground - medieval grass field
+        // Visual ground - medieval grass field with textures
         const groundSize = 150;
         const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 50, 50);
         
@@ -178,10 +183,14 @@ export class Game {
         }
         groundGeometry.computeVertexNormals();
         
+        // Create layered ground with textures
+        const grassTexture = ProceduralTextures.createGrassTexture();
         const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a7c59,
+            map: grassTexture,
+            color: 0xFFFFFF, // White to show true texture colors
             roughness: 0.9,
-            metalness: 0.1
+            metalness: 0.1,
+            flatShading: false  // Smoother for textures
         });
         
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -189,8 +198,132 @@ export class Game {
         ground.receiveShadow = true;
         this.scene.add(ground);
         
+        // Add stone path near catapult area
+        const pathGeometry = new THREE.PlaneGeometry(40, 60);
+        const stoneTexture = ProceduralTextures.createStonePathTexture();
+        const pathMaterial = new THREE.MeshStandardMaterial({
+            map: stoneTexture,
+            roughness: 0.95,
+            metalness: 0.05
+        });
+        const path = new THREE.Mesh(pathGeometry, pathMaterial);
+        path.rotation.x = -Math.PI / 2;
+        path.position.set(5, 0.02, 0); // Slightly above ground to avoid z-fighting
+        path.receiveShadow = true;
+        this.scene.add(path);
+        
+        // Add fern/foliage overlay patches around the edges
+        const fernTexture = ProceduralTextures.createFernTexture();
+        const fernPositions = [
+            { x: -50, z: 40 },
+            { x: 50, z: 40 },
+            { x: -50, z: -40 },
+            { x: 50, z: -40 },
+            { x: -60, z: 0 },
+            { x: 60, z: 0 }
+        ];
+        
+        fernPositions.forEach(pos => {
+            const fernGeometry = new THREE.PlaneGeometry(15, 15);
+            const fernMaterial = new THREE.MeshStandardMaterial({
+                map: fernTexture,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide,
+                alphaTest: 0.1
+            });
+            const ferns = new THREE.Mesh(fernGeometry, fernMaterial);
+            ferns.rotation.x = -Math.PI / 2;
+            ferns.position.set(pos.x, 0.05, pos.z);
+            this.scene.add(ferns);
+        });
+        
         // Physics ground (flat)
         this.physicsWorld.createGroundBody();
+    }
+    
+    createCartoonSky() {
+        // Create cartoon sky dome
+        const skyGeometry = new THREE.SphereGeometry(400, 32, 15);
+        skyGeometry.scale(-1, 1, 1); // Flip inside out
+        
+        // Cartoon sky shader
+        const vertexShader = `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        
+        const fragmentShader = `
+            varying vec3 vWorldPosition;
+            
+            void main() {
+                float h = normalize(vWorldPosition).y;
+                
+                // Cartoon sky colors (bright and flat)
+                vec3 skyBlue = vec3(0.4, 0.7, 1.0);      // Bright blue
+                vec3 horizonBlue = vec3(0.7, 0.85, 1.0); // Light blue at horizon
+                
+                // Simple gradient with smooth transition (cartoon style)
+                float gradient = smoothstep(0.0, 0.5, h);
+                vec3 skyColor = mix(horizonBlue, skyBlue, gradient);
+                
+                gl_FragColor = vec4(skyColor, 1.0);
+            }
+        `;
+        
+        const skyMaterial = new THREE.ShaderMaterial({
+            uniforms: {},
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            side: THREE.BackSide,
+            depthWrite: false
+        });
+        
+        const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+        this.scene.add(skyDome);
+    }
+    
+    createCartoonClouds() {
+        // Create simple cartoon cloud texture
+        const cloudCanvas = document.createElement('canvas');
+        cloudCanvas.width = 256;
+        cloudCanvas.height = 128;
+        const ctx = cloudCanvas.getContext('2d');
+        
+        // Draw simple cartoon cloud (three overlapping circles)
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(64, 80, 40, 0, Math.PI * 2);
+        ctx.arc(110, 80, 50, 0, Math.PI * 2);
+        ctx.arc(150, 80, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        const cloudTexture = new THREE.CanvasTexture(cloudCanvas);
+        const cloudMaterial = new THREE.SpriteMaterial({ 
+            map: cloudTexture,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        // Add multiple clouds around the scene
+        for (let i = 0; i < 15; i++) {
+            const cloud = new THREE.Sprite(cloudMaterial);
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 250 + Math.random() * 100;
+            const height = 80 + Math.random() * 60;
+            
+            cloud.position.set(
+                Math.cos(angle) * distance,
+                height,
+                Math.sin(angle) * distance
+            );
+            cloud.scale.set(60 + Math.random() * 30, 30 + Math.random() * 15, 1);
+            this.scene.add(cloud);
+        }
     }
     
     setupControls() {
@@ -291,6 +424,16 @@ export class Game {
             if (e.code === 'KeyZ') {
                 e.preventDefault();
                 this.cycleCamera();
+            }
+            
+            // P to print current camera position (for debugging)
+            if (e.code === 'KeyP') {
+                e.preventDefault();
+                console.log('📍 Current Camera Position:');
+                console.log(`  position: new THREE.Vector3(${this.cameraPosition.x.toFixed(2)}, ${this.cameraPosition.y.toFixed(2)}, ${this.cameraPosition.z.toFixed(2)}),`);
+                console.log(`  angle: ${this.cameraAngle.toFixed(2)},`);
+                console.log(`  yaw: ${this.cameraYaw.toFixed(2)}`);
+                console.log(`\nDegrees: pitch=${(this.cameraAngle * 180 / Math.PI).toFixed(1)}°, yaw=${(this.cameraYaw * 180 / Math.PI).toFixed(1)}°`);
             }
             
             // R to reset level
@@ -446,6 +589,9 @@ export class Game {
     fire() {
         if (this.ammo <= 0 || this.activeProjectile) return;
         
+        // Hide the loaded ball in catapult
+        this.catapult.hideBall();
+        
         // Create and fire projectile at full power
         const startPos = this.catapult.getProjectileStartPosition();
         const velocity = this.catapult.getProjectileVelocity(this.power);
@@ -478,6 +624,11 @@ export class Game {
             this.cameraFollowMode = false;
             this.loadCameraPreset(this.currentPresetIndex);
             this.updateCameraLookDirection();
+            
+            // Show ball again if we have ammo left
+            if (this.ammo > 0) {
+                this.catapult.showBall();
+            }
         }, 5000);
     }
     
@@ -498,6 +649,9 @@ export class Game {
         this.loadCameraPreset(0); // Reset to first preset
         this.updateCameraLookDirection();
         this.loadLevel();
+        
+        // Show ball again
+        this.catapult.showBall();
     }
     
     nextLevel() {
@@ -505,6 +659,9 @@ export class Game {
         this.level = new Level(this.scene, this.physicsWorld, this.currentLevel);
         this.ammo = 10;
         this.loadLevel();
+        
+        // Show ball for new level
+        this.catapult.showBall();
     }
     
     checkVictory() {

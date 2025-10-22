@@ -1,6 +1,6 @@
-# Medieval Catapult Siege 🏰
+# Castle Crasher 🏰
 
-A 3D browser-based medieval catapult game built with Three.js and Cannon.js physics engine.
+A 3D browser-based medieval castle destruction game built with Three.js and Cannon.js physics engine.
 
 ## Game Description
 
