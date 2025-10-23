@@ -6,14 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "api": "node api/server.js",
+    "dev:all": "npm run dev & npm run api"
   },
   "dependencies": {
-    "three": "^0.170.0",
-    "cannon-es": "^0.20.0"
+    "@prisma/client": "^6.18.0",
+    "cannon-es": "^0.20.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "prisma": "^6.18.0",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
   }
 }
-

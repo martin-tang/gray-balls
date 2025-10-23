@@ -12,6 +12,13 @@ export class Level {
         this.targets = [];
         this.buildings = [];
         
+        // Track initial counts and destroyed counts
+        this.initialTargetCount = 0;
+        this.initialBuildingCount = 0;
+        this.targetsDestroyed = 0;
+        this.obstaclesDestroyed = 0;
+        this.obstacleScoreAccumulated = 0; // Track weighted score of destroyed obstacles
+        
         // Create seeded random generator based on level number
         this.random = new SeededRandom(levelNumber * 12345);
         this.medievalAssets = new MedievalAssets(scene, physicsWorld, this.random);
@@ -37,6 +44,11 @@ export class Level {
         // Clear existing level
         this.clear();
         
+        // Reset destroyed counts
+        this.targetsDestroyed = 0;
+        this.obstaclesDestroyed = 0;
+        this.obstacleScoreAccumulated = 0;
+        
         // Load level based on level number
         switch(this.levelNumber) {
             case 1:
@@ -48,9 +60,34 @@ export class Level {
             case 3:
                 this.createLevel3();
                 break;
-            default:
-                this.createRandomLevel();
+            case 4:
+                this.createLevel4();
+                break;
+            case 5:
+                this.createLevel5();
+                break;
+            case 6:
+                this.createLevel6();
+                break;
+            case 7:
+                this.createLevel7();
+                break;
+            case 8:
+                this.createLevel8();
+                break;
+            case 9:
+                this.createLevel9();
+                break;
+            case 10:
+                this.createLevel10();
+                break;
+            // default:
+            //     this.createRandomLevel();
         }
+        
+        // Store initial counts
+        this.initialTargetCount = this.targets.length;
+        this.initialBuildingCount = this.buildings.length;
         
         // Spawn medieval scenery assets around the edges
         this.spawnBattlefieldScenery();
@@ -133,10 +170,214 @@ export class Level {
         this.addTarget(baseX, 0.5, 0, 'loot');
     }
     
+    createLevel4() {
+        // Pyramid structure with indestructible base corners
+        const baseX = 35;
+        
+        // Indestructible corner pillars (deep purple)
+        this.addBuilding(baseX - 3, 3, -3, 'indestructible-pillar');
+        this.addBuilding(baseX + 3, 3, -3, 'indestructible-pillar');
+        this.addBuilding(baseX - 3, 3, 3, 'indestructible-pillar');
+        this.addBuilding(baseX + 3, 3, 3, 'indestructible-pillar');
+        
+        // Base layer
+        this.addBuilding(baseX - 2, 1, -2, 'wall');
+        this.addBuilding(baseX, 1, -2, 'wall');
+        this.addBuilding(baseX + 2, 1, -2, 'wall');
+        this.addBuilding(baseX - 2, 1, 0, 'wall');
+        this.addBuilding(baseX + 2, 1, 0, 'wall');
+        this.addBuilding(baseX - 2, 1, 2, 'wall');
+        this.addBuilding(baseX, 1, 2, 'wall');
+        this.addBuilding(baseX + 2, 1, 2, 'wall');
+        
+        // Ground targets
+        this.addTarget(baseX, 0.5, 0, 'loot');
+        
+        // Mid layer
+        this.addBuilding(baseX - 1, 3, -1, 'wall');
+        this.addBuilding(baseX + 1, 3, -1, 'wall');
+        this.addBuilding(baseX - 1, 3, 1, 'wall');
+        this.addBuilding(baseX + 1, 3, 1, 'wall');
+        
+        this.addTarget(baseX - 1, 2.2, -1, 'soldier');
+        this.addTarget(baseX + 1, 2.2, -1, 'soldier');
+        
+        // Top
+        this.addBuilding(baseX, 5, 0, 'wall');
+        this.addTarget(baseX, 6, 0, 'upgraded-soldier');
+    }
+    
+    createLevel5() {
+        // Line of towers with indestructible barriers
+        const baseX = 40;
+        
+        // Indestructible front barriers (force player to aim over them)
+        this.addBuilding(baseX - 4, 1, -4, 'indestructible-block');
+        this.addBuilding(baseX, 1, -4, 'indestructible-block');
+        this.addBuilding(baseX + 4, 1, -4, 'indestructible-block');
+        
+        for (let i = 0; i < 3; i++) {
+            const x = baseX + i * 4 - 4;
+            this.addBuilding(x, 1.5, 0, 'tower');
+            this.addTarget(x, 3.5, 0, i === 1 ? 'upgraded-soldier' : 'soldier');
+        }
+        
+        // Ground targets
+        this.addTarget(baseX - 4, 0.5, -2, 'basic');
+        this.addTarget(baseX, 0.5, -2, 'loot');
+        this.addTarget(baseX + 4, 0.5, -2, 'basic');
+    }
+    
+    createLevel6() {
+        // U-shaped fort with indestructible outer walls
+        const baseX = 45;
+        
+        // Indestructible outer walls (can't be destroyed)
+        this.addBuilding(baseX - 3, 1, -2, 'indestructible-wall');
+        this.addBuilding(baseX - 3, 1, 2, 'indestructible-wall');
+        this.addBuilding(baseX + 3, 1, -2, 'indestructible-wall');
+        this.addBuilding(baseX + 3, 1, 2, 'indestructible-wall');
+        
+        // Destructible center walls
+        this.addBuilding(baseX - 3, 1, 0, 'wall');
+        this.addBuilding(baseX + 3, 1, 0, 'wall');
+        
+        // Back wall
+        this.addBuilding(baseX - 1, 1, 3, 'wall');
+        this.addBuilding(baseX + 1, 1, 3, 'wall');
+        
+        // Targets inside
+        this.addTarget(baseX - 3, 2.2, 0, 'soldier');
+        this.addTarget(baseX + 3, 2.2, 0, 'soldier');
+        this.addTarget(baseX, 0.5, 1, 'loot');
+        this.addTarget(baseX, 2.2, 3, 'upgraded-soldier');
+    }
+    
+    createLevel7() {
+        // Double-decker platform
+        const baseX = 50;
+        
+        // Lower level
+        this.addBuilding(baseX - 2, 1, 0, 'platform');
+        this.addBuilding(baseX + 2, 1, 0, 'platform');
+        this.addTarget(baseX - 2, 1.8, 0, 'soldier');
+        this.addTarget(baseX + 2, 1.8, 0, 'soldier');
+        
+        // Support pillars
+        this.addBuilding(baseX - 1, 2.5, -1, 'wall');
+        this.addBuilding(baseX + 1, 2.5, -1, 'wall');
+        this.addBuilding(baseX - 1, 2.5, 1, 'wall');
+        this.addBuilding(baseX + 1, 2.5, 1, 'wall');
+        
+        // Upper level
+        this.addBuilding(baseX, 4.5, 0, 'platform');
+        this.addTarget(baseX - 0.8, 5.3, 0, 'basic');
+        this.addTarget(baseX + 0.8, 5.3, 0, 'basic');
+        this.addTarget(baseX, 5.3, 0, 'loot');
+    }
+    
+    createLevel8() {
+        // Scattered outposts with indestructible center pillar
+        const baseX = 55;
+        
+        // Indestructible center pillar (forces creative aiming)
+        this.addBuilding(baseX, 3, 0, 'indestructible-pillar');
+        
+        // Outpost 1
+        this.addBuilding(baseX - 4, 1, -3, 'tower');
+        this.addTarget(baseX - 4, 3, -3, 'soldier');
+        
+        // Outpost 2
+        this.addBuilding(baseX + 4, 1, -3, 'tower');
+        this.addTarget(baseX + 4, 3, -3, 'soldier');
+        
+        // Central platform (on top of indestructible pillar)
+        this.addBuilding(baseX, 6.5, 0, 'platform');
+        this.addTarget(baseX, 7.3, 0, 'upgraded-soldier');
+        
+        // Outpost 3
+        this.addBuilding(baseX - 2, 1, 3, 'tower');
+        this.addTarget(baseX - 2, 3, 3, 'basic');
+        
+        // Outpost 4
+        this.addBuilding(baseX + 2, 1, 3, 'tower');
+        this.addTarget(baseX + 2, 3, 3, 'basic');
+        
+        // Ground treasure
+        this.addTarget(baseX - 3, 0.5, 0, 'loot');
+    }
+    
+    createLevel9() {
+        // Fortress with indestructible keep base
+        const baseX = 60;
+        
+        // Indestructible fortress foundation
+        this.addBuilding(baseX, 0.5, 0, 'indestructible-platform');
+        
+        // Outer walls
+        this.addBuilding(baseX - 3, 1, -3, 'wall');
+        this.addBuilding(baseX + 3, 1, -3, 'wall');
+        this.addBuilding(baseX - 3, 1, 3, 'wall');
+        this.addBuilding(baseX + 3, 1, 3, 'wall');
+        
+        // Corner guards
+        this.addTarget(baseX - 3, 2.2, -3, 'soldier');
+        this.addTarget(baseX + 3, 2.2, -3, 'soldier');
+        this.addTarget(baseX - 3, 2.2, 3, 'soldier');
+        this.addTarget(baseX + 3, 2.2, 3, 'soldier');
+        
+        // Central keep (on indestructible base)
+        this.addBuilding(baseX, 2.5, 0, 'castle');
+        this.addTarget(baseX, 5, 0, 'upgraded-soldier');
+        
+        // Treasure
+        this.addTarget(baseX, 1, 0, 'loot');
+    }
+    
+    createLevel10() {
+        // Final challenge - The Grand Castle with indestructible defenses
+        const baseX = 65;
+        
+        // Indestructible outer gate walls (deep purple barriers)
+        this.addBuilding(baseX - 6, 2, -5, 'indestructible-wall');
+        this.addBuilding(baseX + 6, 2, -5, 'indestructible-wall');
+        this.addBuilding(baseX - 7, 2, 0, 'indestructible-wall');
+        this.addBuilding(baseX + 7, 2, 0, 'indestructible-wall');
+        
+        // Main castle
+        this.addBuilding(baseX, 3, 0, 'castle');
+        this.addTarget(baseX, 6, 0, 'upgraded-soldier');
+        
+        // Front towers
+        this.addBuilding(baseX - 4, 2, -4, 'tower');
+        this.addBuilding(baseX + 4, 2, -4, 'tower');
+        this.addTarget(baseX - 4, 4.5, -4, 'upgraded-soldier');
+        this.addTarget(baseX + 4, 4.5, -4, 'upgraded-soldier');
+        
+        // Side walls with guards
+        this.addBuilding(baseX - 5, 1, 0, 'wall');
+        this.addBuilding(baseX + 5, 1, 0, 'wall');
+        this.addTarget(baseX - 5, 2.2, 0, 'soldier');
+        this.addTarget(baseX + 5, 2.2, 0, 'soldier');
+        
+        // Back towers
+        this.addBuilding(baseX - 3, 1.5, 4, 'tower');
+        this.addBuilding(baseX + 3, 1.5, 4, 'tower');
+        this.addTarget(baseX - 3, 3.5, 4, 'soldier');
+        this.addTarget(baseX + 3, 3.5, 4, 'soldier');
+        
+        // Ground targets
+        this.addTarget(baseX - 2, 0.5, -2, 'basic');
+        this.addTarget(baseX + 2, 0.5, -2, 'basic');
+        this.addTarget(baseX, 0.5, 2, 'loot');
+    }
+    
     createRandomLevel() {
         // Procedurally generated level (using seeded random for consistency)
-        const baseX = 20 + (this.levelNumber * 5);
-        const complexity = Math.min(this.levelNumber, 5);
+        // Cap the level number to prevent objects from being placed too far away
+        const cappedLevel = Math.min(this.levelNumber, 15);
+        const baseX = 20 + (cappedLevel * 5);
+        const complexity = Math.min(cappedLevel, 5);
         
         // Base platform
         this.addBuilding(baseX, 0.15, 0, 'platform');
@@ -496,15 +737,39 @@ export class Level {
         // Update medieval assets (for animations like bonfires)
         this.medievalAssets.update(deltaTime);
         
-        // Remove destroyed targets
+        // Track destroyed targets before filtering
+        const targetsBefore = this.targets.length;
         this.targets = this.targets.filter(target => !target.isDestroyed);
+        const targetsRemoved = targetsBefore - this.targets.length;
+        this.targetsDestroyed += targetsRemoved;
         
-        // Remove destroyed buildings
+        // Track destroyed buildings before filtering
+        const buildingsBefore = this.buildings.length;
+        // Accumulate score from buildings about to be destroyed
+        this.buildings.forEach(building => {
+            if (building.isDestroyed) {
+                this.obstacleScoreAccumulated += building.scoreValue || 0;
+            }
+        });
         this.buildings = this.buildings.filter(building => !building.isDestroyed);
+        const buildingsRemoved = buildingsBefore - this.buildings.length;
+        this.obstaclesDestroyed += buildingsRemoved;
     }
     
     getRemainingTargets() {
         return this.targets.length;
+    }
+    
+    getDestroyedCounts() {
+        return {
+            targets: this.targetsDestroyed,
+            obstacles: this.obstaclesDestroyed,
+            obstacleScore: this.obstacleScoreAccumulated
+        };
+    }
+    
+    getObstacleScore() {
+        return this.obstacleScoreAccumulated;
     }
     
     checkCollisions(projectile) {

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-url" content="http://localhost:3001">
     <title>Castle Crasher</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <style>
@@ -104,6 +105,7 @@
             text-align: center;
             display: none;
             border: 3px solid #FFD700;
+            z-index: 2000;
         }
         
         #game-over h1 {
@@ -122,10 +124,84 @@
             border-radius: 10px;
             cursor: pointer;
             font-weight: bold;
+            pointer-events: auto;
         }
         
         #game-over button:hover {
             background: #A0522D;
+        }
+        
+        #game-over-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        #game-over-buttons button {
+            margin: 5px;
+        }
+        
+        #next-level-btn {
+            background: linear-gradient(135deg, #2E7D32, #43A047);
+            border: 2px solid #4CAF50;
+        }
+        
+        #next-level-btn:hover {
+            background: linear-gradient(135deg, #43A047, #66BB6A);
+        }
+        
+        
+        #nickname-entry, #leaderboard-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            color: white;
+            text-align: center;
+            border: 3px solid #FFD700;
+            z-index: 2000;
+            min-width: 500px;
+            max-width: 90vw;
+        }
+        
+        .leaderboard-filter-btn {
+            padding: 8px 15px;
+            margin: 5px;
+            background: rgba(139, 69, 19, 0.6);
+            border: 2px solid #8B4513;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .leaderboard-filter-btn:hover {
+            background: rgba(160, 82, 45, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .leaderboard-filter-btn.active {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+        
+        #leaderboard-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #leaderboard-table tbody tr:hover {
+            background: rgba(139, 69, 19, 0.3);
+        }
+        
+        #leaderboard-table th, #leaderboard-table td {
+            color: white;
         }
         
         #loading {
@@ -151,6 +227,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            padding: 10px;
         }
         
         #intro-screen.hidden {
@@ -159,36 +236,48 @@
         
         .intro-content {
             max-width: 765px;
-            width: 76.5%;
+            width: 90%;
+            height: 98vh;
+            max-height: 98vh;
             background: rgba(0, 0, 0, 0.8);
             border: 3px solid #8B4513;
             border-radius: 17px;
-            padding: 34px;
+            padding: clamp(10px, 2vh, 20px);
             box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
             color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: clamp(8px, 1.5vh, 12px);
         }
         
         .intro-title {
-            font-size: 41px;
+            font-size: clamp(20px, 4.5vw, 36px);
             text-align: center;
-            margin-bottom: 8px;
             color: #FFD700;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
             font-weight: bold;
+            flex-shrink: 0;
+            margin: 0;
+            padding: 0;
         }
         
         .intro-subtitle {
             text-align: center;
-            font-size: 17px;
-            margin-bottom: 26px;
+            font-size: clamp(12px, 2vw, 15px);
             color: #B8B8B8;
+            flex-shrink: 0;
+            margin: 0;
+            padding: 0;
         }
         
         .controls-carousel {
             position: relative;
             overflow: hidden;
-            margin: 26px 0;
-            padding: 17px 0;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
         }
         
         .controls-container {
@@ -198,28 +287,28 @@
         
         .control-page {
             min-width: 100%;
-            padding: 0 17px;
+            padding: 0 clamp(5px, 1vw, 10px);
             box-sizing: border-box;
         }
         
         .control-section {
             background: rgba(139, 69, 19, 0.3);
-            padding: 17px;
+            padding: clamp(8px, 1.5vh, 12px);
             border-radius: 9px;
-            margin-bottom: 13px;
+            margin-bottom: 0;
         }
         
         .control-section h3 {
             color: #FFD700;
-            margin-bottom: 13px;
-            font-size: 19px;
+            margin-bottom: clamp(5px, 1vh, 8px);
+            font-size: clamp(14px, 2vw, 17px);
         }
         
         .control-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
+            padding: clamp(3px, 0.5vh, 5px) 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
@@ -229,37 +318,38 @@
         
         .control-key {
             background: rgba(255, 255, 255, 0.2);
-            padding: 4px 13px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-weight: bold;
             color: #FFD700;
-            min-width: 102px;
+            min-width: 70px;
             text-align: center;
-            font-size: 14px;
+            font-size: clamp(10px, 1.8vw, 13px);
         }
         
         .control-desc {
             flex: 1;
-            margin-left: 17px;
+            margin-left: 10px;
             color: #E0E0E0;
-            font-size: 14px;
+            font-size: clamp(11px, 1.8vw, 13px);
         }
         
         .carousel-nav {
             display: flex;
             justify-content: center;
-            gap: 13px;
-            margin: 17px 0;
+            gap: 8px;
+            flex-shrink: 0;
+            margin: 0;
         }
         
         .carousel-btn {
             background: rgba(139, 69, 19, 0.8);
             border: 2px solid #8B4513;
             color: white;
-            padding: 8px 26px;
-            border-radius: 9px;
+            padding: clamp(4px, 1vh, 6px) clamp(12px, 2vw, 18px);
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: clamp(11px, 1.8vw, 13px);
             font-weight: bold;
             transition: all 0.3s;
         }
@@ -277,13 +367,14 @@
         .carousel-dots {
             display: flex;
             justify-content: center;
-            gap: 9px;
-            margin: 13px 0;
+            gap: 6px;
+            flex-shrink: 0;
+            margin: 0;
         }
         
         .dot {
-            width: 10px;
-            height: 10px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             cursor: pointer;
@@ -297,23 +388,108 @@
         
         .start-button {
             display: block;
-            margin: 26px auto 0;
-            padding: 13px 51px;
-            font-size: 20px;
+            margin: 0 auto;
+            padding: clamp(8px, 1.5vh, 12px) clamp(25px, 4vw, 40px);
+            font-size: clamp(14px, 2.5vw, 18px);
             background: linear-gradient(135deg, #8B4513, #A0522D);
-            border: 3px solid #FFD700;
+            border: 2px solid #FFD700;
             color: #FFD700;
-            border-radius: 13px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
             transition: all 0.3s;
+            flex-shrink: 0;
         }
         
         .start-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        .clear-progress-btn {
+            display: block;
+            margin: 0 auto;
+            padding: clamp(5px, 1vh, 8px) clamp(15px, 2.5vw, 25px);
+            font-size: clamp(11px, 1.8vw, 13px);
+            background: rgba(139, 69, 19, 0.5);
+            border: 1px solid #8B4513;
+            color: #B8B8B8;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: normal;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+        
+        .clear-progress-btn:hover {
+            background: rgba(180, 50, 50, 0.7);
+            border-color: #D32F2F;
+            color: #FFB3B3;
+            opacity: 1;
+        }
+        
+        .level-selector {
+            flex-shrink: 0;
+            margin: 0;
+            text-align: center;
+        }
+        
+        .level-selector h3 {
+            color: #FFD700;
+            margin-bottom: clamp(6px, 1vh, 10px);
+            font-size: clamp(14px, 2.5vw, 17px);
+        }
+        
+        .level-btn {
+            width: clamp(35px, 7vw, 45px);
+            height: clamp(35px, 7vw, 45px);
+            font-size: clamp(13px, 2.5vw, 16px);
+            font-weight: bold;
+            background: rgba(139, 69, 19, 0.6);
+            border: 2px solid #8B4513;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .level-btn:hover {
+            background: rgba(160, 82, 45, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+        
+        .level-btn.selected {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            border-color: #FFD700;
+            color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .level-btn.completed {
+            background: linear-gradient(135deg, #2E7D32, #43A047);
+            border-color: #4CAF50;
+            position: relative;
+        }
+        
+        .level-btn.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 1px;
+            right: 3px;
+            font-size: 10px;
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        .level-btn.completed.selected {
+            background: linear-gradient(135deg, #1B5E20, #2E7D32);
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
     </style>
 </head>
@@ -393,6 +569,10 @@
                                 <span class="control-desc">Reset level if you get stuck</span>
                             </div>
                             <div class="control-item">
+                                <span class="control-key">ESC</span>
+                                <span class="control-desc">Return to main menu</span>
+                            </div>
+                            <div class="control-item">
                                 <span class="control-key">P</span>
                                 <span class="control-desc">Print camera position (debug)</span>
                             </div>
@@ -412,7 +592,31 @@
                 <button class="carousel-btn" id="next-btn">Next ▶</button>
             </div>
             
+            <div class="level-selector">
+                <h3>🎮 Select Level</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: clamp(6px, 1vw, 8px); justify-content: center;">
+                    <button class="level-btn" data-level="1">1</button>
+                    <button class="level-btn" data-level="2">2</button>
+                    <button class="level-btn" data-level="3">3</button>
+                    <button class="level-btn" data-level="4">4</button>
+                    <button class="level-btn" data-level="5">5</button>
+                    <button class="level-btn" data-level="6">6</button>
+                    <button class="level-btn" data-level="7">7</button>
+                    <button class="level-btn" data-level="8">8</button>
+                    <button class="level-btn" data-level="9">9</button>
+                    <button class="level-btn" data-level="10">10</button>
+                </div>
+                <p style="margin-top: clamp(5px, 1vh, 8px); font-size: clamp(11px, 1.8vw, 13px); color: #B8B8B8;">
+                    Selected: <span id="selected-level" style="color: #FFD700; font-weight: bold;">1</span><br>
+                    <span style="font-size: clamp(10px, 1.5vw, 11px); opacity: 0.8;">💡 Press 1-9 or 0 for quick select</span>
+                </p>
+            </div>
+            
             <button class="start-button" id="start-game">START GAME</button>
+            
+            <button class="start-button" id="view-leaderboard-btn" style="background: linear-gradient(135deg, #8B4513, #A0522D); border-color: #8B4513; font-size: clamp(12px, 2vw, 16px); padding: clamp(6px, 1vh, 10px) clamp(20px, 3vw, 30px);">🏆 View Leaderboard</button>
+            
+            <button class="clear-progress-btn" id="clear-progress">🗑️ Clear All Progress</button>
         </div>
     </div>
     
@@ -422,6 +626,7 @@
         <div>🎯 Targets: <span id="targets">0</span></div>
         <div>💣 Ammo: <span id="ammo">10</span></div>
         <div>⭐ Score: <span id="score">0</span></div>
+        <div id="high-score-container" style="display: none;">🏆 High Score: <span id="high-score">0</span></div>
         <div>📊 Level: <span id="level">1</span></div>
         <div>⚡ Power: <span id="power">15</span></div>
         <div>📷 Camera: <span id="camera-preset">Behind Catapult</span></div>
@@ -431,15 +636,58 @@
     
     <div id="controls">
         <div id="controls-text">
-            <div>⬆️⬇️⬅️➡️ Aim Catapult  •  [ ] Adjust Power  •  SPACE Fire</div>
-            <div style="margin-top: 5px; font-size: 14px; opacity: 0.9;">WASDQE Move Camera  •  Mouse Drag - Pan Camera   •  Z Cycle View</div>
+            <div>⬆️⬇️⬅️➡️ Aim Catapult  •  [ ] Adjust Power  •  SPACE Fire  •  ESC Menu</div>
+            <div style="margin-top: 5px; font-size: 14px; opacity: 0.9;">WASDQE Move Camera  •  Mouse Drag - Pan Camera   •  Z Cycle View  •  R Reset</div>
         </div>
     </div>
     
     <div id="game-over">
         <h1>Victory!</h1>
         <p id="final-score">Final Score: 0</p>
-        <button onclick="location.reload()">Play Again</button>
+        <div id="game-over-buttons">
+            <button id="next-level-btn" style="display:none;">Next Level ▶</button>
+            <button id="retry-level-btn">Retry Level</button>
+            <button id="menu-btn">Main Menu</button>
+        </div>
+    </div>
+    
+    <!-- Nickname Entry Screen -->
+    <div id="nickname-entry" style="display:none;">
+        <h1 style="color: #FFD700; margin-bottom: 20px;">🏆 Submit to Leaderboard</h1>
+        <p id="nickname-score-display" style="font-size: 24px; margin-bottom: 30px;"></p>
+        <div>
+            <label style="font-size: 18px; display: block; margin-bottom: 10px;">Enter your nickname (3 letters):</label>
+            <input type="text" id="nickname-input" maxlength="3" style="font-size: 32px; padding: 15px; width: 200px; text-align: center; text-transform: uppercase; border: 3px solid #FFD700; border-radius: 10px; background: rgba(0,0,0,0.7); color: #FFD700; font-weight: bold;" />
+            <div id="nickname-error" style="color: #FF6B6B; margin-top: 10px; min-height: 20px;"></div>
+        </div>
+        <div style="margin-top: 30px;">
+            <button id="nickname-submit-btn" style="font-size: 20px; padding: 15px 40px; margin: 10px; background: linear-gradient(135deg, #2E7D32, #43A047); border: 2px solid #4CAF50; color: white; border-radius: 10px; cursor: pointer; font-weight: bold;">Submit</button>
+            <button id="nickname-cancel-btn" style="font-size: 20px; padding: 15px 40px; margin: 10px; background: #8B4513; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">Skip</button>
+        </div>
+    </div>
+    
+    <!-- Leaderboard Screen -->
+    <div id="leaderboard-screen" style="display:none;">
+        <h1 style="color: #FFD700; margin-bottom: 20px;">🏆 Leaderboard</h1>
+        <div id="leaderboard-content" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+            <table id="leaderboard-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: rgba(139, 69, 19, 0.5); position: sticky; top: 0;">
+                        <th style="padding: 10px; text-align: left;">#</th>
+                        <th style="padding: 10px; text-align: left;">Name</th>
+                        <th style="padding: 10px; text-align: left;">Completed</th>
+                        <th style="padding: 10px; text-align: right;">Total Score</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-tbody">
+                    <tr><td colspan="4" style="text-align: center; padding: 40px;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 20px;">
+            <button id="leaderboard-submit-score-btn" style="display:none; font-size: 20px; padding: 15px 40px; margin: 10px; background: linear-gradient(135deg, #2E7D32, #43A047); border: 2px solid #4CAF50; color: white; border-radius: 10px; cursor: pointer; font-weight: bold;">🏆 Submit My Score</button>
+            <button id="leaderboard-close-btn" style="font-size: 20px; padding: 15px 40px; margin: 10px; background: #8B4513; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">Close</button>
+        </div>
     </div>
     
     <script>
@@ -490,7 +738,7 @@
             });
         });
         
-        // Keyboard navigation for carousel
+        // Keyboard navigation for carousel and level selection
         document.addEventListener('keydown', (e) => {
             if (introScreen.classList.contains('hidden')) return;
             
@@ -504,15 +752,282 @@
                 e.preventDefault();
                 startGame();
             }
+            
+            // Number keys 1-9 for level selection, 0 for level 10
+            const numKey = parseInt(e.key);
+            if (numKey >= 1 && numKey <= 9) {
+                const levelBtn = document.querySelector(`.level-btn[data-level="${numKey}"]`);
+                if (levelBtn) levelBtn.click();
+            } else if (e.key === '0') {
+                const levelBtn = document.querySelector(`.level-btn[data-level="10"]`);
+                if (levelBtn) levelBtn.click();
+            }
         });
+        
+        // Level selector
+        let selectedLevel = 1;
+        const levelBtns = document.querySelectorAll('.level-btn');
+        const selectedLevelDisplay = document.getElementById('selected-level');
+        
+        // Load save data and mark completed levels
+        function loadCompletedLevels() {
+            try {
+                const saveData = localStorage.getItem('castleCrasher_saveData');
+                if (saveData) {
+                    const data = JSON.parse(saveData);
+                    levelBtns.forEach(btn => {
+                        const levelNum = parseInt(btn.dataset.level);
+                        if (data.levels[levelNum] && data.levels[levelNum].completed) {
+                            btn.classList.add('completed');
+                            // Add high score tooltip
+                            btn.title = `High Score: ${data.levels[levelNum].highScore.toFixed(1)}`;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to load save data for level selector:', e);
+            }
+        }
+        
+        loadCompletedLevels();
+        
+        // Listen for reload event from game
+        window.addEventListener('reload-completed-levels', () => {
+            // Clear existing completed states
+            levelBtns.forEach(btn => {
+                btn.classList.remove('completed');
+                btn.title = '';
+            });
+            // Reload them
+            loadCompletedLevels();
+        });
+        
+        levelBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedLevel = parseInt(btn.dataset.level);
+                
+                // Update visual selection
+                levelBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                
+                // Update display
+                selectedLevelDisplay.textContent = selectedLevel;
+            });
+        });
+        
+        // Set level 1 as selected by default
+        levelBtns[0].classList.add('selected');
         
         // Start game function
         function startGame() {
+            // Store selected level for the game to read
+            window.selectedStartLevel = selectedLevel;
             introScreen.classList.add('hidden');
             document.getElementById('loading').style.display = 'block';
         }
         
         startBtn.addEventListener('click', startGame);
+        
+        // View Leaderboard button - works independently of game instance
+        const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
+        if (viewLeaderboardBtn) {
+            viewLeaderboardBtn.addEventListener('click', async () => {
+                // Use game instance if available, otherwise load directly
+                if (window.gameInstance && window.gameInstance.showLeaderboard) {
+                    window.gameInstance.showLeaderboard();
+                } else {
+                    // Standalone leaderboard view from main menu
+                    await showStandaloneLeaderboard();
+                }
+            });
+        }
+        
+        // Standalone leaderboard function that doesn't require game instance
+        async function showStandaloneLeaderboard() {
+            const leaderboardScreen = document.getElementById('leaderboard-screen');
+            const tbody = document.getElementById('leaderboard-tbody');
+            const closeBtn = document.getElementById('leaderboard-close-btn');
+            const submitScoreBtn = document.getElementById('leaderboard-submit-score-btn');
+            
+            // Show submit score button - users can submit from main menu
+            if (submitScoreBtn) {
+                submitScoreBtn.style.display = 'inline-block';
+                submitScoreBtn.onclick = () => {
+                    // Check if user has any completed levels in localStorage
+                    const saveData = JSON.parse(localStorage.getItem('castleCrasher_saveData') || '{"levels":{}}');
+                    const hasScores = Object.keys(saveData.levels || {}).length > 0;
+                    
+                    if (!hasScores) {
+                        alert('Complete at least one level to submit your score to the leaderboard!');
+                        return;
+                    }
+                    
+                    // If game instance exists, use it; otherwise show basic nickname entry
+                    if (window.gameInstance && window.gameInstance.showNicknameEntry) {
+                        leaderboardScreen.style.display = 'none';
+                        window.gameInstance.showNicknameEntry();
+                    } else {
+                        // Show nickname entry without game instance
+                        leaderboardScreen.style.display = 'none';
+                        showStandaloneNicknameEntry(saveData);
+                    }
+                };
+            }
+            
+            // Show screen
+            leaderboardScreen.style.display = 'block';
+            
+            // Get API URL from meta tag or use default
+            const apiUrl = document.querySelector('meta[name="api-url"]')?.content || 'http://localhost:3001';
+            
+            // Load leaderboard data
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">Loading...</td></tr>';
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/leaderboard?limit=50`);
+                const result = await response.json();
+                
+                if (result.entries && result.entries.length > 0) {
+                    tbody.innerHTML = result.entries.map((entry, index) => `
+                        <tr>
+                            <td style="padding: 10px;">${index + 1}</td>
+                            <td style="padding: 10px; font-weight: bold; color: #FFD700;">${entry.nickname}</td>
+                            <td style="padding: 10px;">${entry.levelsCompleted || 0}/10</td>
+                            <td style="padding: 10px; text-align: right; font-weight: bold; color: #4CAF50;">${entry.totalScore.toFixed(1)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No entries yet. Be the first!</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #FF6B6B;">Failed to load leaderboard. Make sure the API server is running.</td></tr>';
+            }
+            
+            // Close button
+            closeBtn.onclick = () => {
+                leaderboardScreen.style.display = 'none';
+            };
+        }
+        
+        // Standalone nickname entry function (for when game instance isn't loaded)
+        async function showStandaloneNicknameEntry(saveData) {
+            const nicknameEntry = document.getElementById('nickname-entry');
+            const scoreDisplay = document.getElementById('nickname-score-display');
+            const nicknameInput = document.getElementById('nickname-input');
+            const nicknameError = document.getElementById('nickname-error');
+            const submitBtn = document.getElementById('nickname-submit-btn');
+            const cancelBtn = document.getElementById('nickname-cancel-btn');
+            
+            // Calculate total score from saveData
+            let totalScore = 0;
+            let levelsCompleted = 0;
+            Object.values(saveData.levels || {}).forEach(level => {
+                if (level.highScore) {
+                    totalScore += level.highScore;
+                    levelsCompleted++;
+                }
+            });
+            
+            scoreDisplay.textContent = `Total Score: ${totalScore.toFixed(1)} (${levelsCompleted}/10 levels)`;
+            nicknameInput.value = '';
+            nicknameError.textContent = '';
+            nicknameEntry.style.display = 'block';
+            
+            // Submit handler
+            submitBtn.onclick = async () => {
+                const nickname = nicknameInput.value.toUpperCase().trim();
+                
+                // Validate nickname
+                if (nickname.length !== 3 || !/^[A-Z]{3}$/.test(nickname)) {
+                    nicknameError.textContent = 'Must be exactly 3 letters (A-Z)';
+                    return;
+                }
+                
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+                
+                try {
+                    const apiUrl = document.querySelector('meta[name="api-url"]')?.content || 'http://localhost:3001';
+                    const response = await fetch(`${apiUrl}/api/leaderboard`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nickname, totalScore, levelsCompleted })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        nicknameEntry.style.display = 'none';
+                        if (result.newPlayer) {
+                            alert('🎉 Welcome to the leaderboard!');
+                        } else if (result.improved) {
+                            alert('✨ New high score! Your leaderboard entry has been updated!');
+                        } else {
+                            alert('Score submitted, but not better than your previous total score.');
+                        }
+                        showStandaloneLeaderboard();
+                    } else {
+                        nicknameError.textContent = result.error || 'Failed to submit score';
+                    }
+                } catch (error) {
+                    nicknameError.textContent = 'Failed to submit. Make sure API server is running.';
+                }
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            };
+            
+            // Cancel handler
+            cancelBtn.onclick = () => {
+                nicknameEntry.style.display = 'none';
+            };
+            
+            // Enter key handler
+            nicknameInput.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                } else if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            };
+        }
+        
+        // Expose standalone functions globally so game instance can use them too
+        window.showStandaloneLeaderboard = showStandaloneLeaderboard;
+        window.showStandaloneNicknameEntry = showStandaloneNicknameEntry;
+        
+        // Clear progress button
+        const clearProgressBtn = document.getElementById('clear-progress');
+        clearProgressBtn.addEventListener('click', () => {
+            const confirmed = confirm(
+                '⚠️ Are you sure you want to clear all progress?\n\n' +
+                'This will delete:\n' +
+                '• All completed levels\n' +
+                '• All high scores\n' +
+                '• All save data\n\n' +
+                'This action cannot be undone!'
+            );
+            
+            if (confirmed) {
+                try {
+                    // Clear localStorage
+                    localStorage.removeItem('castleCrasher_saveData');
+                    
+                    // Clear all completed states from level buttons
+                    levelBtns.forEach(btn => {
+                        btn.classList.remove('completed');
+                        btn.title = '';
+                    });
+                    
+                    alert('✅ All progress has been cleared!');
+                    console.log('Progress cleared by user');
+                } catch (e) {
+                    console.error('Error clearing progress:', e);
+                    alert('❌ Error clearing progress. Please try again.');
+                }
+            }
+        });
     </script>
     
     <script type="module" src="/src/main.js"></script>

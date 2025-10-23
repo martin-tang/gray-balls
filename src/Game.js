@@ -5,6 +5,8 @@ import { TrajectoryPreview } from './TrajectoryPreview.js';
 import { Level } from './Level.js';
 import { Projectile } from './objects/Projectile.js';
 import { ProceduralTextures } from './utils/ProceduralTextures.js';
+import { SaveSystem } from './utils/SaveSystem.js';
+import { LeaderboardService } from './utils/LeaderboardService.js';
 
 export class Game {
     constructor() {
@@ -17,8 +19,10 @@ export class Game {
         this.level = null;
         
         // Game state
+        this.maxLevel = 10; // Total number of levels available
         this.currentLevel = 1;
         this.ammo = 10;
+        this.startingAmmo = 10;
         this.score = 0;
         this.projectiles = [];
         this.activeProjectile = null;
@@ -26,6 +30,24 @@ export class Game {
         this.minPower = 5;
         this.maxPower = 35;
         this.powerChangeRate = 10; // How fast power changes per second
+        
+        // Scoring tracking
+        this.targetsDestroyed = 0;
+        this.obstaclesDestroyed = 0;
+        this.shotsUsed = 0;
+        
+        // Save system
+        this.saveSystem = new SaveSystem();
+        
+        // Leaderboard system
+        this.leaderboardService = new LeaderboardService();
+        
+        // Reinitialization flag
+        this.needsReinit = false;
+        
+        // Victory check prevention (to avoid checking victory during initialization)
+        this.victoryCheckEnabled = false;
+        this.victoryShown = false; // Prevent showing victory screen multiple times
         
         // Mouse tracking for camera panning
         this.isPanning = false;
@@ -79,11 +101,16 @@ export class Game {
             powerDecrease: false
         };
         
-        this.aimSpeed = 1.5; // radians per second
+        this.aimSpeed = 0.75; // radians per second (slower for more precise aiming)
         this.cameraMoveSpeed = 15; // units per second for camera panning
     }
     
     init() {
+        // Check if a level was selected from the intro screen
+        if (window.selectedStartLevel) {
+            this.currentLevel = window.selectedStartLevel;
+        }
+        
         // Three.js setup
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x6BB6FF); // Cartoon bright blue
@@ -127,7 +154,7 @@ export class Game {
         // Trajectory preview
         this.trajectory = new TrajectoryPreview(this.scene);
         
-        // Load first level
+        // Load selected level
         this.level = new Level(this.scene, this.physicsWorld, this.currentLevel);
         this.loadLevel();
         
@@ -442,6 +469,12 @@ export class Game {
                 this.resetLevel();
             }
             
+            // ESC to return to main menu
+            if (e.code === 'Escape') {
+                e.preventDefault();
+                this.returnToMainMenu();
+            }
+            
             // [ and ] to adjust power (smooth adjustment)
             if (e.code === 'BracketLeft') {
                 e.preventDefault();
@@ -474,19 +507,19 @@ export class Game {
         let angleChanged = false;
         
         if (this.keys.arrowLeft) {
-            this.catapult.aimAngleH -= this.aimSpeed * deltaTime;
+            this.catapult.aimAngleH += this.aimSpeed * deltaTime; // Fixed: was -=, now +=
             angleChanged = true;
         }
         if (this.keys.arrowRight) {
-            this.catapult.aimAngleH += this.aimSpeed * deltaTime;
+            this.catapult.aimAngleH -= this.aimSpeed * deltaTime; // Fixed: was +=, now -=
             angleChanged = true;
         }
         if (this.keys.arrowUp) {
-            this.catapult.aimAngleV += this.aimSpeed * deltaTime;
+            this.catapult.aimAngleV -= this.aimSpeed * deltaTime;
             angleChanged = true;
         }
         if (this.keys.arrowDown) {
-            this.catapult.aimAngleV -= this.aimSpeed * deltaTime;
+            this.catapult.aimAngleV += this.aimSpeed * deltaTime;
             angleChanged = true;
         }
         
@@ -589,8 +622,15 @@ export class Game {
     fire() {
         if (this.ammo <= 0 || this.activeProjectile) return;
         
+        // Track shot used
+        this.shotsUsed++;
+        
         // Hide the loaded ball in catapult
         this.catapult.hideBall();
+        
+        // Hide crosshair during flight
+        const crosshair = document.getElementById('crosshair');
+        if (crosshair) crosshair.style.display = 'none';
         
         // Create and fire projectile at full power
         const startPos = this.catapult.getProjectileStartPosition();
@@ -628,6 +668,10 @@ export class Game {
             // Show ball again if we have ammo left
             if (this.ammo > 0) {
                 this.catapult.showBall();
+                
+                // Show crosshair again
+                const crosshair = document.getElementById('crosshair');
+                if (crosshair) crosshair.style.display = 'block';
             }
         }, 5000);
     }
@@ -637,6 +681,16 @@ export class Game {
         console.log(`📊 Loaded Level ${this.currentLevel} with ${targetCount} targets`);
         
         this.updateUI();
+        
+        // Reset victory flags
+        this.victoryCheckEnabled = false;
+        this.victoryShown = false;
+        
+        // Enable victory checking after a short delay to ensure level is fully initialized
+        setTimeout(() => {
+            this.victoryCheckEnabled = true;
+            console.log('✅ Victory checking enabled');
+        }, 500);
     }
     
     resetLevel() {
@@ -644,7 +698,8 @@ export class Game {
         this.projectiles.forEach(p => p.remove());
         this.projectiles = [];
         this.activeProjectile = null;
-        this.ammo = 10;
+        this.ammo = this.startingAmmo;
+        this.shotsUsed = 0;
         this.cameraFollowMode = false;
         this.loadCameraPreset(0); // Reset to first preset
         this.updateCameraLookDirection();
@@ -652,55 +707,410 @@ export class Game {
         
         // Show ball again
         this.catapult.showBall();
+        
+        // Show crosshair again
+        const crosshair = document.getElementById('crosshair');
+        if (crosshair) crosshair.style.display = 'block';
+    }
+    
+    returnToMainMenu() {
+        console.log('🏠 Returning to main menu - cleaning up game state...');
+        
+        // Disable victory checking immediately
+        this.victoryCheckEnabled = false;
+        
+        // Clean up current level
+        if (this.level) {
+            this.level.clear();
+        }
+        
+        // Remove all projectiles
+        this.projectiles.forEach(p => p.remove());
+        this.projectiles = [];
+        this.activeProjectile = null;
+        
+        // Reset game state
+        this.ammo = this.startingAmmo;
+        this.shotsUsed = 0;
+        this.cameraFollowMode = false;
+        
+        // Hide trajectory
+        if (this.trajectory) {
+            this.trajectory.hide();
+        }
+        
+        // Hide crosshair
+        const crosshair = document.getElementById('crosshair');
+        if (crosshair) crosshair.style.display = 'none';
+        
+        // Hide game over screen if showing
+        const gameOverScreen = document.getElementById('game-over');
+        if (gameOverScreen) {
+            gameOverScreen.style.display = 'none';
+        }
+        
+        // Show loading screen
+        const loading = document.getElementById('loading');
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        
+        // Show the intro screen
+        const introScreen = document.getElementById('intro-screen');
+        if (introScreen) {
+            introScreen.classList.remove('hidden');
+            
+            // Reload completed levels in case new ones were completed
+            const event = new Event('reload-completed-levels');
+            window.dispatchEvent(event);
+            
+            console.log('✅ Main menu shown - game state cleaned up');
+        }
+        
+        // Flag that we need to reinitialize on next game start
+        this.needsReinit = true;
     }
     
     nextLevel() {
         this.currentLevel++;
+        
+        // Check if we've completed all levels
+        if (this.currentLevel > this.maxLevel) {
+            console.log('🎊 ALL LEVELS COMPLETED! 🎊');
+            this.returnToMainMenu();
+            return;
+        }
+        
         this.level = new Level(this.scene, this.physicsWorld, this.currentLevel);
-        this.ammo = 10;
+        this.ammo = this.startingAmmo;
+        this.shotsUsed = 0;
         this.loadLevel();
         
         // Show ball for new level
         this.catapult.showBall();
+        
+        // Show crosshair for new level
+        const crosshair = document.getElementById('crosshair');
+        if (crosshair) crosshair.style.display = 'block';
+    }
+    
+    calculateFinalScore() {
+        // New scoring formula: (targets destroyed + weighted obstacle score) / shots used
+        const destroyedCounts = this.level.getDestroyedCounts();
+        const targetsDestroyed = destroyedCounts.targets;
+        const obstacleScore = destroyedCounts.obstacleScore || 0;
+        
+        // Prevent division by zero
+        if (this.shotsUsed === 0) {
+            return 0;
+        }
+        
+        // Use weighted obstacle score instead of just count
+        const finalScore = ((targetsDestroyed + obstacleScore) / this.shotsUsed) * 100;
+        return Math.round(finalScore * 10) / 10; // Round to 1 decimal place
     }
     
     checkVictory() {
+        // Don't check victory if we need reinit, during menu, or before level is initialized
+        if (this.needsReinit || !this.victoryCheckEnabled || this.victoryShown) return;
+        
         const remainingTargets = this.level.getRemainingTargets();
         
         if (remainingTargets === 0) {
+            // Mark victory as shown to prevent duplicate popups
+            this.victoryShown = true;
+            const finalScore = this.calculateFinalScore();
+            const destroyedCounts = this.level.getDestroyedCounts();
+            
             console.log('🎉 Victory! Level Complete!');
+            console.log(`Targets: ${destroyedCounts.targets}, Obstacles: ${destroyedCounts.obstacles}, Shots: ${this.shotsUsed}`);
+            console.log(`Final Score: ${finalScore}`);
+            
+            // Save to local storage
+            this.saveSystem.updateLevel(
+                this.currentLevel,
+                finalScore,
+                destroyedCounts.targets,
+                destroyedCounts.obstacles,
+                this.shotsUsed
+            );
+            
+            const levelData = this.saveSystem.getLevelData(this.currentLevel);
+            const isNewHighScore = finalScore === levelData.highScore;
             
             // Show victory screen
             setTimeout(() => {
                 const gameOverScreen = document.getElementById('game-over');
-                const finalScore = document.getElementById('final-score');
-                finalScore.textContent = `Level ${this.currentLevel} Complete! Score: ${this.score}`;
+                const finalScoreEl = document.getElementById('final-score');
+                const titleEl = gameOverScreen.querySelector('h1');
+                
+                // Special message for completing final level
+                if (this.currentLevel === this.maxLevel) {
+                    titleEl.textContent = isNewHighScore ? '🎊 GAME COMPLETED! NEW HIGH SCORE! 🎊' : '🎊 ALL LEVELS COMPLETED! 🎊';
+                } else {
+                    titleEl.textContent = isNewHighScore ? '🏆 NEW HIGH SCORE!' : 'Level Complete!';
+                }
+                finalScoreEl.innerHTML = `
+                    <div style="margin: 15px 0;">
+                        <div style="font-size: 32px; color: #FFD700; margin-bottom: 10px;">Score: ${finalScore}</div>
+                        <div style="font-size: 16px; opacity: 0.9;">
+                            Targets Destroyed: ${destroyedCounts.targets}<br>
+                            Obstacles Destroyed: ${destroyedCounts.obstacles}<br>
+                            Shots Used: ${this.shotsUsed} / ${this.startingAmmo}
+                        </div>
+                        ${levelData.highScore ? `<div style="margin-top: 15px; font-size: 14px; opacity: 0.7;">Previous High Score: ${levelData.highScore}</div>` : ''}
+                    </div>
+                `;
+                
                 gameOverScreen.style.display = 'block';
                 
-                // Auto advance to next level after a delay
-                setTimeout(() => {
-                    gameOverScreen.style.display = 'none';
-                    this.nextLevel();
-                }, 3000);
+                // Setup buttons with proper event handlers - use requestAnimationFrame to ensure DOM is ready
+                requestAnimationFrame(() => {
+                    this.setupGameOverButtons(true);
+                });
             }, 1000);
         } else if (this.ammo === 0 && !this.activeProjectile) {
             // Game over - no ammo and no active projectile
+            // Mark as shown to prevent duplicate popups
+            this.victoryShown = true;
+            
+            const finalScore = this.calculateFinalScore();
+            const destroyedCounts = this.level.getDestroyedCounts();
+            
             setTimeout(() => {
                 const gameOverScreen = document.getElementById('game-over');
-                const finalScore = document.getElementById('final-score');
-                gameOverScreen.querySelector('h1').textContent = 'Out of Ammo!';
-                finalScore.textContent = `Score: ${this.score} | Targets Remaining: ${remainingTargets}`;
+                const finalScoreEl = document.getElementById('final-score');
+                const titleEl = gameOverScreen.querySelector('h1');
+                
+                titleEl.textContent = 'Out of Ammo!';
+                finalScoreEl.innerHTML = `
+                    <div style="margin: 15px 0;">
+                        <div style="font-size: 24px; color: #FF6B6B; margin-bottom: 10px;">Score: ${finalScore}</div>
+                        <div style="font-size: 16px; opacity: 0.9;">
+                            Targets Remaining: ${remainingTargets}<br>
+                            Targets Destroyed: ${destroyedCounts.targets}<br>
+                            Obstacles Destroyed: ${destroyedCounts.obstacles}
+                        </div>
+                    </div>
+                `;
                 gameOverScreen.style.display = 'block';
+                
+                // Setup buttons - no next level since they failed
+                requestAnimationFrame(() => {
+                    this.setupGameOverButtons(false);
+                });
             }, 1000);
         }
     }
     
+    setupGameOverButtons(showNextLevel) {
+        console.log('🎮 setupGameOverButtons called, showNextLevel:', showNextLevel);
+        
+        const gameOverScreen = document.getElementById('game-over');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const retryLevelBtn = document.getElementById('retry-level-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        
+        console.log('Button elements found:', {
+            gameOverScreen: !!gameOverScreen,
+            nextLevelBtn: !!nextLevelBtn,
+            retryLevelBtn: !!retryLevelBtn,
+            menuBtn: !!menuBtn
+        });
+        
+        if (!nextLevelBtn || !retryLevelBtn || !menuBtn) {
+            console.error('❌ Game over buttons not found!');
+            return;
+        }
+        
+        // Show/hide next level button
+        if (showNextLevel && this.currentLevel < this.maxLevel) {
+            console.log('✅ Showing next level button');
+            nextLevelBtn.style.display = 'inline-block';
+        } else {
+            console.log('❌ Hiding next level button');
+            nextLevelBtn.style.display = 'none';
+        }
+        
+        // Use onclick to ensure only one handler exists
+        nextLevelBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ Next level clicked!');
+            gameOverScreen.style.display = 'none';
+            this.nextLevel();
+        };
+        
+        retryLevelBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ Retry level clicked!');
+            gameOverScreen.style.display = 'none';
+            this.resetLevel();
+        };
+        
+        menuBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✅ Menu clicked!');
+            gameOverScreen.style.display = 'none';
+            this.returnToMainMenu();
+        };
+        
+        console.log('✅ All button handlers attached successfully');
+    }
+    
+    showNicknameEntry() {
+        const nicknameEntry = document.getElementById('nickname-entry');
+        const scoreDisplay = document.getElementById('nickname-score-display');
+        const nicknameInput = document.getElementById('nickname-input');
+        const nicknameError = document.getElementById('nickname-error');
+        const submitBtn = document.getElementById('nickname-submit-btn');
+        const cancelBtn = document.getElementById('nickname-cancel-btn');
+        
+        // Calculate total score from localStorage
+        const totalStats = this.saveSystem.getTotalStats();
+        const totalScore = totalStats.totalHighScore;
+        const levelsCompleted = totalStats.levelsCompleted;
+        
+        scoreDisplay.textContent = `Total Score: ${totalScore.toFixed(1)} (${levelsCompleted}/10 levels)`;
+        
+        // Clear previous input
+        nicknameInput.value = '';
+        nicknameError.textContent = '';
+        
+        // Show screen
+        nicknameEntry.style.display = 'block';
+        nicknameInput.focus();
+        
+        // Handle input validation
+        nicknameInput.oninput = () => {
+            const value = nicknameInput.value.toUpperCase();
+            nicknameInput.value = value.replace(/[^A-Z]/g, '');
+            nicknameError.textContent = '';
+        };
+        
+        // Handle submit
+        submitBtn.onclick = async () => {
+            const nickname = nicknameInput.value.toUpperCase();
+            const validation = this.leaderboardService.validateNickname(nickname);
+            
+            if (!validation.valid) {
+                nicknameError.textContent = validation.error;
+                return;
+            }
+            
+            // Submit to leaderboard
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            // Get total score from localStorage
+            const totalStats = this.saveSystem.getTotalStats();
+            
+            const result = await this.leaderboardService.submitScore(
+                nickname,
+                totalStats.totalHighScore,
+                totalStats.levelsCompleted
+            );
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+            
+            if (result.success) {
+                console.log('✅ Score submitted successfully!');
+                nicknameEntry.style.display = 'none';
+                
+                // Show feedback message
+                if (result.newPlayer) {
+                    alert('🎉 Welcome to the leaderboard!');
+                } else if (result.improved) {
+                    alert('✨ New high score! Your leaderboard entry has been updated!');
+                } else {
+                    alert('Score submitted, but not better than your previous total score.');
+                }
+                
+                this.showLeaderboard(); // Show full leaderboard sorted by total
+            } else {
+                nicknameError.textContent = result.error || 'Failed to submit score';
+            }
+        };
+        
+        // Handle cancel
+        cancelBtn.onclick = () => {
+            nicknameEntry.style.display = 'none';
+        };
+        
+        // Handle Enter key
+        nicknameInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            } else if (e.key === 'Escape') {
+                cancelBtn.click();
+            }
+        };
+    }
+    
+    async showLeaderboard() {
+        const leaderboardScreen = document.getElementById('leaderboard-screen');
+        const tbody = document.getElementById('leaderboard-tbody');
+        const closeBtn = document.getElementById('leaderboard-close-btn');
+        const submitScoreBtn = document.getElementById('leaderboard-submit-score-btn');
+        
+        // Always show submit score button when leaderboard is opened
+        if (submitScoreBtn) {
+            submitScoreBtn.style.display = 'inline-block';
+            submitScoreBtn.onclick = () => {
+                leaderboardScreen.style.display = 'none';
+                this.showNicknameEntry();
+            };
+        }
+        
+        // Show screen
+        leaderboardScreen.style.display = 'block';
+        
+        // Load leaderboard data
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">Loading...</td></tr>';
+        
+        const result = await this.leaderboardService.getLeaderboard(50);
+        
+        if (result.success && result.entries.length > 0) {
+            tbody.innerHTML = result.entries.map((entry, index) => `
+                <tr>
+                    <td style="padding: 10px;">${index + 1}</td>
+                    <td style="padding: 10px; font-weight: bold; color: #FFD700;">${entry.nickname}</td>
+                    <td style="padding: 10px;">${entry.levelsCompleted || 0}/10</td>
+                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #4CAF50;">${entry.totalScore.toFixed(1)}</td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">No entries yet. Be the first!</td></tr>';
+        }
+        
+        // Close button
+        closeBtn.onclick = () => {
+            leaderboardScreen.style.display = 'none';
+        };
+    }
+    
     updateUI() {
+        const destroyedCounts = this.level.getDestroyedCounts();
+        const currentScore = this.calculateFinalScore();
+        
         document.getElementById('targets').textContent = this.level.getRemainingTargets();
         document.getElementById('ammo').textContent = this.ammo;
-        document.getElementById('score').textContent = this.score;
+        document.getElementById('score').textContent = currentScore.toFixed(1);
         document.getElementById('level').textContent = this.currentLevel;
         document.getElementById('power').textContent = Math.round(this.power);
+        
+        // Show high score if available
+        const highScore = this.saveSystem.getHighScore(this.currentLevel);
+        const highScoreEl = document.getElementById('high-score');
+        if (highScoreEl && highScore > 0) {
+            highScoreEl.textContent = highScore.toFixed(1);
+            highScoreEl.parentElement.style.display = 'block';
+        } else if (highScoreEl) {
+            highScoreEl.parentElement.style.display = 'none';
+        }
     }
     
     update(deltaTime) {

@@ -11,17 +11,27 @@ export class Building {
         this.body = null;
         this.isDestroyed = false;
         
+        // Check if indestructible
+        this.isIndestructible = buildingType.includes('indestructible');
+        
         // Material and hit points system
         this.material = this.getMaterialType(buildingType);
-        this.maxHitPoints = this.getMaxHitPoints();
+        this.maxHitPoints = this.isIndestructible ? Infinity : this.getMaxHitPoints();
         this.hitPoints = this.maxHitPoints;
         this.damageThreshold = 20; // Minimum force required to damage
+        
+        // Score value based on material and type
+        this.scoreValue = this.calculateScoreValue();
         
         this.create();
     }
     
     getMaterialType(buildingType) {
         // Determine if building is wood or stone
+        if (buildingType.includes('indestructible')) {
+            return 'indestructible';
+        }
+        
         switch(buildingType) {
             case 'platform':
                 return 'wood';
@@ -54,8 +64,39 @@ export class Building {
         return base * multiplier;
     }
     
+    calculateScoreValue() {
+        // Indestructible buildings have no score value
+        if (this.isIndestructible) return 0;
+        
+        // Base score by material (stronger material = more points)
+        const materialScore = {
+            'wood': 10,
+            'stone': 25,
+            'indestructible': 0
+        };
+        
+        // Size/type multiplier (bigger structures = more points)
+        const typeMultiplier = {
+            'platform': 0.5,    // Small, easy
+            'wall': 1.0,        // Medium
+            'tower': 2.0,       // Large, tall
+            'castle': 5.0       // Huge, complex
+        };
+        
+        const base = materialScore[this.material] || 10;
+        const multiplier = typeMultiplier[this.buildingType] || 1.0;
+        
+        return Math.round(base * multiplier);
+    }
+    
     create() {
         let geometry, material, physicsShape;
+        
+        // Handle indestructible variations
+        if (this.buildingType.includes('indestructible')) {
+            const baseType = this.buildingType.replace('indestructible-', '');
+            return this.createIndestructible(baseType);
+        }
         
         switch(this.buildingType) {
             case 'wall':
@@ -160,7 +201,82 @@ export class Building {
         this.physicsWorld.addBody(this.body);
     }
     
+    createIndestructible(baseType) {
+        let geometry, physicsShape, mass;
+        
+        // Deep purple/black color for indestructible obstacles
+        const indestructibleColor = 0x1a0a2e; // Very dark purple, almost black
+        const material = new THREE.MeshStandardMaterial({ 
+            color: indestructibleColor,
+            roughness: 0.95,
+            metalness: 0.3,
+            emissive: 0x0a0015, // Slight purple glow
+            emissiveIntensity: 0.1
+        });
+        
+        switch(baseType) {
+            case 'wall':
+                geometry = new THREE.BoxGeometry(3, 2, 0.5);
+                physicsShape = new CANNON.Box(new CANNON.Vec3(1.5, 1, 0.25));
+                mass = 0; // Static body for indestructible
+                break;
+                
+            case 'tower':
+                geometry = new THREE.CylinderGeometry(0.8, 1, 4, 8);
+                physicsShape = new CANNON.Cylinder(0.8, 1, 4, 8);
+                mass = 0; // Static body
+                break;
+                
+            case 'platform':
+                geometry = new THREE.BoxGeometry(3, 0.3, 3);
+                physicsShape = new CANNON.Box(new CANNON.Vec3(1.5, 0.15, 1.5));
+                mass = 0; // Static body
+                break;
+                
+            case 'pillar':
+                // Tall narrow pillar
+                geometry = new THREE.CylinderGeometry(0.5, 0.6, 6, 8);
+                physicsShape = new CANNON.Cylinder(0.5, 0.6, 6, 8);
+                mass = 0;
+                break;
+                
+            case 'block':
+                // Large solid block
+                geometry = new THREE.BoxGeometry(2, 2, 2);
+                physicsShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+                mass = 0;
+                break;
+                
+            default:
+                geometry = new THREE.BoxGeometry(2, 2, 2);
+                physicsShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
+                mass = 0;
+        }
+        
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.copy(this.position);
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
+        this.scene.add(this.mesh);
+        
+        // Static physics body (mass = 0 means immovable)
+        this.body = new CANNON.Body({
+            mass: mass,
+            shape: physicsShape,
+            position: new CANNON.Vec3(this.position.x, this.position.y, this.position.z),
+            material: this.physicsWorld.objectMaterial,
+            type: CANNON.Body.STATIC // Explicitly set as static
+        });
+        
+        this.physicsWorld.addBody(this.body);
+    }
+    
     takeDamage(impactForce) {
+        // Indestructible buildings don't take damage
+        if (this.isIndestructible) {
+            console.log(`🛡️ ${this.buildingType} is indestructible! Impact force: ${impactForce.toFixed(1)}`);
+            return false;
+        }
         // Calculate damage based on impact force
         if (impactForce < this.damageThreshold) {
             return false; // No damage if below threshold
@@ -218,6 +334,9 @@ export class Building {
     
     update(deltaTime) {
         if (this.isDestroyed) return;
+        
+        // Indestructible buildings are static, no need to update
+        if (this.isIndestructible) return;
         
         // Sync visual with physics
         this.mesh.position.copy(this.body.position);

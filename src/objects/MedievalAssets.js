@@ -98,16 +98,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 100,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(radius, radius * 1.2, height, segments),
             position: new CANNON.Vec3(position.x, position.y + height / 2 - 5, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'tower' });
@@ -171,16 +169,14 @@ export class MedievalAssets {
         // group.position.copy(position);
         this.scene.add(group);  
         
-        // Physics body (small mass, can be knocked over)
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 5,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(size * 0.5, size * 0.6, size * 0.5)),
             position: new CANNON.Vec3(position.x, position.y + size * 0.6, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'tent' });
@@ -639,16 +635,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body (heavy, doesn't move easily)
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 1000,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, 0.75)),
             position: new CANNON.Vec3(position.x, position.y + height / 2 - 5, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'gate' });
@@ -794,16 +788,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Small physics body (mostly decorative)
+        // Small physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 10,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(ringRadius, ringRadius, 0.3, 8),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'bonfire', fireLight });
@@ -903,16 +895,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 15,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(1, 0.75, 0.15)),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'weaponRack' });
@@ -954,16 +944,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 8,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(radius, radius * 0.9, height, 8),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'barrel' });
@@ -1023,16 +1011,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 5,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(0.08, 0.08, height, 6),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'banner' });
@@ -1079,17 +1065,15 @@ export class MedievalAssets {
         group.rotation.y = rotation;
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 12,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(length / 2, height / 2, 0.1)),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
         body.quaternion.setFromEuler(0, rotation, 0);
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'fence' });
@@ -1172,16 +1156,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 80,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(1, height / 2, 1)),
             position: new CANNON.Vec3(position.x, position.y, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'watchtower' });
@@ -1224,17 +1206,15 @@ export class MedievalAssets {
         group.rotation.y = rotation;
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 100,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(length / 2, height / 2, 0.4)),
             position: new CANNON.Vec3(position.x, position.y + height / 2 - 5, position.z),
             material: this.physicsWorld.objectMaterial
         });
         body.quaternion.setFromEuler(0, rotation, 0);
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'stoneWall' });
@@ -1304,16 +1284,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body
+        // Physics body - STATIC (immovable)
         const body_phys = new CANNON.Body({
-            mass: 15,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(0.4, 0.5, height, 8),
             position: new CANNON.Vec3(position.x, position.y + height / 2, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body_phys.velocity.set(0, 0, 0);
-        body_phys.angularVelocity.set(0, 0, 0);
-        body_phys.sleep();
         this.physicsWorld.addBody(body_phys);
         
         this.assets.push({ mesh: group, body: body_phys, type: 'trainingDummy' });
@@ -1399,16 +1377,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body (heavy stone base)
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 100,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Cylinder(1.2, 1.4, height, 12),
             position: new CANNON.Vec3(position.x, position.y + height / 2, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'well' });
@@ -1466,16 +1442,14 @@ export class MedievalAssets {
         group.position.copy(position);
         this.scene.add(group);
         
-        // Physics body (light, can be knocked over)
+        // Physics body - STATIC (immovable)
         const body = new CANNON.Body({
-            mass: 8,
+            mass: 0,
+            type: CANNON.Body.STATIC,
             shape: new CANNON.Box(new CANNON.Vec3(baleWidth, baleHeight * Math.ceil(count/2), baleDepth)),
             position: new CANNON.Vec3(position.x, position.y - 0.2, position.z),
             material: this.physicsWorld.objectMaterial
         });
-        body.velocity.set(0, 0, 0);
-        body.angularVelocity.set(0, 0, 0);
-        body.sleep();
         this.physicsWorld.addBody(body);
         
         this.assets.push({ mesh: group, body, type: 'hayBales' });

@@ -6,33 +6,45 @@ export class TrajectoryPreview {
         this.points = [];
         this.line = null;
         this.numPoints = 120; // Increased from 50 for longer trajectory
+        this.tubeRadius = 0.075; // Tube radius for visibility
         this.createLine();
     }
     
     createLine() {
-        const geometry = new THREE.BufferGeometry();
-        const material = new THREE.LineBasicMaterial({
+        // Create a thick tube material - bright yellow with emissive glow
+        const material = new THREE.MeshStandardMaterial({
             color: 0xffff00,
-            linewidth: 2,   
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5,
             transparent: true,
-            opacity: 1
+            opacity: 0.8,
+            roughness: 0.3,
+            metalness: 0.1
         });
         
-        // Initialize with empty points
-        const positions = new Float32Array(this.numPoints * 3);
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        // Create initial curve with dummy points
+        const dummyPoints = [];
+        for (let i = 0; i < this.numPoints; i++) {
+            dummyPoints.push(new THREE.Vector3(0, 0, 0));
+        }
+        const curve = new THREE.CatmullRomCurve3(dummyPoints);
         
-        this.line = new THREE.Line(geometry, material);
+        // Create tube geometry from curve
+        const geometry = new THREE.TubeGeometry(curve, this.numPoints - 1, this.tubeRadius, 8, false);
+        
+        this.line = new THREE.Mesh(geometry, material);
+        this.line.castShadow = false; // Don't cast shadows for performance
         this.scene.add(this.line);
         this.hide();
     }
     
     update(startPos, velocity, gravity = 9.82) {
-        const positions = this.line.geometry.attributes.position.array;
+        const points = [];
         const timeStep = 0.08; // Increased from 0.05 for longer trajectory reach
         let hitGround = false;
         let validPoints = 0;
         
+        // Calculate trajectory points
         for (let i = 0; i < this.numPoints; i++) {
             const t = i * timeStep;
             
@@ -44,29 +56,38 @@ export class TrajectoryPreview {
             // Stop if trajectory hits ground
             if (y < 0.1) {
                 hitGround = true;
-                positions[i * 3] = x;
-                positions[i * 3 + 1] = 0.1;
-                positions[i * 3 + 2] = z;
+                points.push(new THREE.Vector3(x, 0.1, z));
                 validPoints = i + 1;
                 break;
             }
             
-            positions[i * 3] = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
+            points.push(new THREE.Vector3(x, y, z));
             validPoints = i + 1;
         }
         
-        // Hide remaining points by setting them to the last valid position
-        if (hitGround) {
-            for (let i = validPoints; i < this.numPoints; i++) {
-                positions[i * 3] = positions[(validPoints - 1) * 3];
-                positions[i * 3 + 1] = positions[(validPoints - 1) * 3 + 1];
-                positions[i * 3 + 2] = positions[(validPoints - 1) * 3 + 2];
+        // Fill remaining points with last position if hit ground early
+        if (hitGround && points.length > 0) {
+            const lastPoint = points[points.length - 1];
+            while (points.length < this.numPoints) {
+                points.push(lastPoint.clone());
             }
         }
         
-        this.line.geometry.attributes.position.needsUpdate = true;
+        // Ensure we have enough points for the curve (minimum 2)
+        if (points.length < 2) {
+            points.push(startPos.clone());
+            points.push(startPos.clone());
+        }
+        
+        // Create new curve from calculated points
+        const curve = new THREE.CatmullRomCurve3(points);
+        
+        // Recreate tube geometry with new curve
+        const newGeometry = new THREE.TubeGeometry(curve, Math.max(validPoints - 1, 1), this.tubeRadius, 8, false);
+        
+        // Dispose old geometry and replace
+        this.line.geometry.dispose();
+        this.line.geometry = newGeometry;
     }
     
     show() {
@@ -77,4 +98,5 @@ export class TrajectoryPreview {
         this.line.visible = false;
     }
 }
+
 

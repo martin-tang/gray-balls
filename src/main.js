@@ -1,4 +1,8 @@
 import { Game } from './Game.js';
+import { Level } from './Level.js';
+
+// Store game instance globally for reinitialization
+let gameInstance = null;
 
 // Wait for DOM to be ready
 window.addEventListener('DOMContentLoaded', () => {
@@ -9,18 +13,55 @@ window.addEventListener('DOMContentLoaded', () => {
     const initGame = () => {
         try {
             loading.textContent = 'Initializing game...';
+            loading.style.display = 'block';
             
-            // Initialize and start the game
-            const game = new Game();
-            game.init();
+            // If game already exists and needs reinit, reload the level
+            if (gameInstance && gameInstance.needsReinit) {
+                console.log('🔄 Reinitializing game for new level...');
+                
+                // Get the selected level
+                if (window.selectedStartLevel) {
+                    gameInstance.currentLevel = window.selectedStartLevel;
+                }
+                
+                // Reload the level
+                gameInstance.level = new Level(
+                    gameInstance.scene, 
+                    gameInstance.physicsWorld, 
+                    gameInstance.currentLevel
+                );
+                gameInstance.loadLevel();
+                
+                // Reset camera to default preset
+                gameInstance.loadCameraPreset(0);
+                gameInstance.updateCameraLookDirection();
+                
+                // Show ball for new level
+                gameInstance.catapult.showBall();
+                
+                // Show crosshair
+                const crosshair = document.getElementById('crosshair');
+                if (crosshair) crosshair.style.display = 'block';
+                
+                // Clear the reinit flag
+                gameInstance.needsReinit = false;
+                
+                console.log('✅ Game reinitialized for level', gameInstance.currentLevel);
+            } else if (!gameInstance) {
+                // First time initialization
+                console.log('🎮 First time game initialization...');
+                gameInstance = new Game();
+                gameInstance.init();
+                gameInstance.start();
+                
+                // Expose game instance globally for leaderboard access
+                window.gameInstance = gameInstance;
+                
+                console.log('🎮 Castle Crasher - Game Started!');
+            }
             
             // Hide loading screen
             loading.style.display = 'none';
-            
-            // Start game loop
-            game.start();
-            
-            console.log('🎮 Castle Crasher - Game Started!');
         } catch (error) {
             console.error('Failed to start game:', error);
             loading.textContent = 'Failed to load game. Please refresh the page.';
@@ -33,7 +74,6 @@ window.addEventListener('DOMContentLoaded', () => {
         mutations.forEach((mutation) => {
             if (mutation.target.classList.contains('hidden')) {
                 initGame();
-                observer.disconnect();
             }
         });
     });
