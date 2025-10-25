@@ -5,8 +5,9 @@
   "description": "A 3D browser-based medieval castle destruction game",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npx prisma generate",
     "preview": "vite preview",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",

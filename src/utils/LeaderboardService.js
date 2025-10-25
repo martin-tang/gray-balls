@@ -3,7 +3,7 @@ export class LeaderboardService {
         this.apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     }
 
-    async submitScore(nickname, totalScore, levelsCompleted) {
+    async submitScore(nickname, totalScore, levelsCompleted, deviceId) {
         try {
             const response = await fetch(`${this.apiUrl}/api/leaderboard`, {
                 method: 'POST',
@@ -13,7 +13,8 @@ export class LeaderboardService {
                 body: JSON.stringify({
                     nickname,
                     totalScore,
-                    levelsCompleted
+                    levelsCompleted,
+                    deviceId
                 })
             });
 
@@ -86,6 +87,36 @@ export class LeaderboardService {
         } catch (error) {
             console.error('Error fetching nickname scores:', error);
             return { success: false, error: error.message, entries: [] };
+        }
+    }
+
+    async updateNickname(deviceId, newNickname) {
+        try {
+            const response = await fetch(`${this.apiUrl}/api/leaderboard/nickname`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    deviceId,
+                    newNickname
+                })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update nickname');
+            }
+
+            return { 
+                success: true, 
+                entry: data.entry,
+                message: data.message
+            };
+        } catch (error) {
+            console.error('Error updating nickname:', error);
+            return { success: false, error: error.message };
         }
     }
 

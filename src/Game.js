@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
 import { PhysicsWorld } from './PhysicsWorld.js';
 import { Catapult } from './Catapult.js';
 import { TrajectoryPreview } from './TrajectoryPreview.js';
@@ -7,6 +8,17 @@ import { Projectile } from './objects/Projectile.js';
 import { ProceduralTextures } from './utils/ProceduralTextures.js';
 import { SaveSystem } from './utils/SaveSystem.js';
 import { LeaderboardService } from './utils/LeaderboardService.js';
+
+// ==========================================
+// 🎨 LEVEL CREATOR TOGGLE
+// ==========================================
+// Set to true to enable Level Creator mode
+// Set to false for production/normal gameplay
+const ENABLE_LEVEL_CREATOR = true;
+// ==========================================
+
+// Import LevelCreator only if enabled (comment out if disabled)
+import { LevelCreator } from './LevelCreator.js';
 
 export class Game {
     constructor() {
@@ -41,6 +53,10 @@ export class Game {
         
         // Leaderboard system
         this.leaderboardService = new LeaderboardService();
+        
+        // Level creator
+        this.levelCreator = null;
+        this.levelCreatorActive = false;
         
         // Reinitialization flag
         this.needsReinit = false;
@@ -101,7 +117,7 @@ export class Game {
             powerDecrease: false
         };
         
-        this.aimSpeed = 0.75; // radians per second (slower for more precise aiming)
+        this.aimSpeed = 0.5; // radians per second (slower for more precise aiming)
         this.cameraMoveSpeed = 15; // units per second for camera panning
     }
     
@@ -148,6 +164,9 @@ export class Game {
         // Ground
         this.createGround();
         
+        // Invisible boundary walls
+        this.createBoundaryWalls();
+        
         // Create catapult
         this.catapult = new Catapult(this.scene, new THREE.Vector3(-8, 0.25, 0));
         
@@ -160,6 +179,22 @@ export class Game {
         
         // Setup controls
         this.setupControls();
+        
+        // Initialize level creator (only if enabled)
+        if (ENABLE_LEVEL_CREATOR) {
+            try {
+                // LevelCreator must be imported above if enabled
+                this.levelCreator = new LevelCreator(this);
+                console.log('🎨 Level Creator enabled - Press Ctrl+L to open');
+            } catch (e) {
+                console.error('❌ Level Creator could not be initialized:', e);
+                console.warn('⚠️ Make sure LevelCreator import is uncommented at the top of Game.js');
+                this.levelCreator = null;
+            }
+        } else {
+            this.levelCreator = null;
+            console.log('🎮 Game mode - Level Creator disabled');
+        }
         
         // Window resize
         window.addEventListener('resize', () => this.onWindowResize());
@@ -221,6 +256,7 @@ export class Game {
         });
         
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.name = 'ground';
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
@@ -234,6 +270,7 @@ export class Game {
             metalness: 0.05
         });
         const path = new THREE.Mesh(pathGeometry, pathMaterial);
+        path.name = 'path';
         path.rotation.x = -Math.PI / 2;
         path.position.set(5, 0.02, 0); // Slightly above ground to avoid z-fighting
         path.receiveShadow = true;
@@ -260,6 +297,7 @@ export class Game {
                 alphaTest: 0.1
             });
             const ferns = new THREE.Mesh(fernGeometry, fernMaterial);
+            ferns.name = 'ferns';
             ferns.rotation.x = -Math.PI / 2;
             ferns.position.set(pos.x, 0.05, pos.z);
             this.scene.add(ferns);
@@ -267,6 +305,49 @@ export class Game {
         
         // Physics ground (flat)
         this.physicsWorld.createGroundBody();
+    }
+    
+    createBoundaryWalls() {
+        // Create invisible walls around the perimeter to keep objects on stage
+        const wallHeight = 50;  // Tall enough to catch flying objects
+        const wallThickness = 1;
+        const stageSize = 75;   // Half of ground size (150/2)
+        
+        // Create 4 walls (north, south, east, west)
+        const walls = [
+            // North wall (behind targets)
+            { 
+                position: new CANNON.Vec3(0, wallHeight/2, stageSize),
+                size: new CANNON.Vec3(stageSize, wallHeight/2, wallThickness/2)
+            },
+            // South wall (behind catapult)
+            { 
+                position: new CANNON.Vec3(0, wallHeight/2, -stageSize),
+                size: new CANNON.Vec3(stageSize, wallHeight/2, wallThickness/2)
+            },
+            // East wall (right side)
+            { 
+                position: new CANNON.Vec3(stageSize, wallHeight/2, 0),
+                size: new CANNON.Vec3(wallThickness/2, wallHeight/2, stageSize)
+            },
+            // West wall (left side)
+            { 
+                position: new CANNON.Vec3(-stageSize, wallHeight/2, 0),
+                size: new CANNON.Vec3(wallThickness/2, wallHeight/2, stageSize)
+            }
+        ];
+        
+        walls.forEach(wall => {
+            const wallBody = new CANNON.Body({
+                mass: 0,  // Static (immovable)
+                shape: new CANNON.Box(wall.size),
+                position: wall.position,
+                material: this.physicsWorld.objectMaterial
+            });
+            this.physicsWorld.addBody(wallBody);
+        });
+        
+        console.log('🧱 Invisible boundary walls created');
     }
     
     createCartoonSky() {
@@ -311,6 +392,7 @@ export class Game {
         });
         
         const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+        skyDome.name = 'sky';
         this.scene.add(skyDome);
     }
     
@@ -339,6 +421,7 @@ export class Game {
         // Add multiple clouds around the scene
         for (let i = 0; i < 15; i++) {
             const cloud = new THREE.Sprite(cloudMaterial);
+            cloud.name = 'cloud';
             const angle = Math.random() * Math.PI * 2;
             const distance = 250 + Math.random() * 100;
             const height = 80 + Math.random() * 60;
@@ -353,9 +436,98 @@ export class Game {
         }
     }
     
+    getOrCreateDeviceId() {
+        // Generate a unique device identifier based on browser fingerprint
+        let deviceId = localStorage.getItem('castleCrasher_deviceId');
+        
+        if (!deviceId) {
+            // Create a fingerprint from browser characteristics
+            const nav = navigator;
+            const screen = window.screen;
+            const fingerprint = [
+                nav.userAgent,
+                nav.language,
+                screen.colorDepth,
+                screen.width + 'x' + screen.height,
+                new Date().getTimezoneOffset(),
+                !!window.sessionStorage,
+                !!window.localStorage
+            ].join('|');
+            
+            // Generate a hash-like ID from the fingerprint + random component
+            deviceId = this.simpleHash(fingerprint) + '-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('castleCrasher_deviceId', deviceId);
+        }
+        
+        return deviceId;
+    }
+    
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(36);
+    }
+    
+    cleanupOrphanedObjects() {
+        // Get list of objects to keep (environment, lights, camera, catapult, trajectory)
+        const keepList = new Set();
+        
+        // Keep lights and essential game objects
+        this.scene.children.forEach(child => {
+            if (child.isLight || 
+                child === this.catapult?.group ||  // Fixed: catapult uses 'group' not 'mesh'
+                child === this.trajectory?.line ||
+                child.name === 'ground' ||
+                child.name === 'path' ||
+                child.name === 'ferns' ||
+                child.name === 'sky' ||
+                child.name === 'cloud') {
+                keepList.add(child);
+            }
+        });
+        
+        // Remove objects not in keep list
+        const toRemove = [];
+        this.scene.children.forEach(child => {
+            if (!keepList.has(child)) {
+                toRemove.push(child);
+            }
+        });
+        
+        // Remove and dispose
+        toRemove.forEach(obj => {
+            if (obj.geometry) {
+                obj.geometry.dispose();
+            }
+            if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        mat.dispose();
+                    });
+                } else {
+                    if (obj.material.map) obj.material.map.dispose();
+                    obj.material.dispose();
+                }
+            }
+            this.scene.remove(obj);
+        });
+        
+        if (toRemove.length > 0) {
+            console.log(`🗑️ Cleaned up ${toRemove.length} orphaned objects`);
+        }
+    }
+    
     setupControls() {
         // Mouse movement for free camera rotation
         this.renderer.domElement.addEventListener('mousemove', (e) => {
+            // Don't process camera movement if level creator is active
+            if (this.levelCreatorActive) return;
+            
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
             
@@ -379,6 +551,9 @@ export class Game {
         
         // Mouse down to start panning
         this.renderer.domElement.addEventListener('mousedown', (e) => {
+            // Don't process if level creator is active
+            if (this.levelCreatorActive) return;
+            
             this.isPanning = true;
             this.mouseStart.x = this.mouse.x;
             this.mouseStart.y = this.mouse.y;
@@ -386,11 +561,17 @@ export class Game {
         
         // Mouse up to stop panning
         this.renderer.domElement.addEventListener('mouseup', (e) => {
+            // Don't process if level creator is active
+            if (this.levelCreatorActive) return;
+            
             this.isPanning = false;
         });
         
         // Mouse wheel for camera angle adjustment (alternative control)
         this.renderer.domElement.addEventListener('wheel', (e) => {
+            // Don't process if level creator is active
+            if (this.levelCreatorActive) return;
+            
             e.preventDefault();
             if (!this.cameraFollowMode) {
                 this.cameraAngle += e.deltaY * 0.001;
@@ -401,6 +582,18 @@ export class Game {
         
         // Keyboard controls
         window.addEventListener('keydown', (e) => {
+            // Don't process game controls if level creator is active
+            if (this.levelCreatorActive) {
+                // Still allow Ctrl+L to toggle creator
+                if (e.code === 'KeyL' && e.ctrlKey) {
+                    e.preventDefault();
+                    if (this.levelCreator) {
+                        this.levelCreator.toggle();
+                    }
+                }
+                return;
+            }
+            
             // Arrow keys for aiming the catapult
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
@@ -475,6 +668,14 @@ export class Game {
                 this.returnToMainMenu();
             }
             
+            // Ctrl+L to toggle level creator
+            if (e.code === 'KeyL' && e.ctrlKey) {
+                e.preventDefault();
+                if (this.levelCreator) {
+                    this.levelCreator.toggle();
+                }
+            }
+            
             // [ and ] to adjust power (smooth adjustment)
             if (e.code === 'BracketLeft') {
                 e.preventDefault();
@@ -503,6 +704,9 @@ export class Game {
     }
     
     updateAimWithArrowKeys(deltaTime) {
+        // Don't process if level creator is active
+        if (this.levelCreatorActive) return;
+        
         // Update catapult aim based on arrow key input
         let angleChanged = false;
         
@@ -620,6 +824,9 @@ export class Game {
     }
     
     fire() {
+        // Don't fire if level creator is active
+        if (this.levelCreatorActive) return;
+        
         if (this.ammo <= 0 || this.activeProjectile) return;
         
         // Track shot used
@@ -686,7 +893,7 @@ export class Game {
         this.victoryCheckEnabled = false;
         this.victoryShown = false;
         
-        // Enable victory checking after a short delay to ensure level is fully initialized
+        // Enable victory checking after a short delay
         setTimeout(() => {
             this.victoryCheckEnabled = true;
             console.log('✅ Victory checking enabled');
@@ -715,6 +922,7 @@ export class Game {
     
     returnToMainMenu() {
         console.log('🏠 Returning to main menu - cleaning up game state...');
+        console.log('📊 Before cleanup - Scene children:', this.scene.children.length, '| Physics bodies:', this.physicsWorld.getBodyCount());
         
         // Disable victory checking immediately
         this.victoryCheckEnabled = false;
@@ -728,6 +936,13 @@ export class Game {
         this.projectiles.forEach(p => p.remove());
         this.projectiles = [];
         this.activeProjectile = null;
+        
+        console.log('📊 After cleanup - Scene children:', this.scene.children.length, '| Physics bodies:', this.physicsWorld.getBodyCount());
+        
+        // Force cleanup of any orphaned objects in the scene
+        this.cleanupOrphanedObjects();
+        
+        console.log('📊 After orphan cleanup - Scene children:', this.scene.children.length, '| Physics bodies:', this.physicsWorld.getBodyCount());
         
         // Reset game state
         this.ammo = this.startingAmmo;
@@ -780,6 +995,9 @@ export class Game {
             this.returnToMainMenu();
             return;
         }
+        
+        // Clear old level before creating new one
+        this.level.clear();
         
         this.level = new Level(this.scene, this.physicsWorld, this.currentLevel);
         this.ammo = this.startingAmmo;
@@ -983,11 +1201,22 @@ export class Game {
         nicknameEntry.style.display = 'block';
         nicknameInput.focus();
         
-        // Handle input validation
+        // Handle input validation - uppercase and filter non-letters
         nicknameInput.oninput = () => {
-            const value = nicknameInput.value.toUpperCase();
-            nicknameInput.value = value.replace(/[^A-Z]/g, '');
-            nicknameError.textContent = '';
+            const current = nicknameInput.value;
+            const filtered = current.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase();
+            
+            // Only update if changed to avoid cursor issues
+            if (filtered !== current) {
+                const cursorPos = nicknameInput.selectionStart;
+                nicknameInput.value = filtered;
+                // Restore cursor position
+                nicknameInput.setSelectionRange(filtered.length, filtered.length);
+            }
+            
+            if (nicknameError.textContent) {
+                nicknameError.textContent = '';
+            }
         };
         
         // Handle submit
@@ -1007,10 +1236,14 @@ export class Game {
             // Get total score from localStorage
             const totalStats = this.saveSystem.getTotalStats();
             
+            // Get or create device ID
+            const deviceId = this.getOrCreateDeviceId();
+            
             const result = await this.leaderboardService.submitScore(
                 nickname,
                 totalStats.totalHighScore,
-                totalStats.levelsCompleted
+                totalStats.levelsCompleted,
+                deviceId
             );
             
             submitBtn.disabled = false;
@@ -1018,6 +1251,32 @@ export class Game {
             
             if (result.success) {
                 console.log('✅ Score submitted successfully!');
+                
+                // Handle worse score scenario
+                if (result.worseScore) {
+                    const confirmed = confirm(
+                        `This device has a higher score (${result.existingScore.toFixed(1)}) under "${result.existingNickname}".\n\n` +
+                        `Would you like to change that entry's nickname to "${nickname}"?`
+                    );
+                    
+                    if (confirmed) {
+                        // Update just the nickname
+                        const updateResult = await this.leaderboardService.updateNickname(deviceId, nickname);
+                        
+                        if (updateResult.success) {
+                            nicknameEntry.style.display = 'none';
+                            alert(`✅ ${updateResult.message}`);
+                            this.showLeaderboard();
+                        } else {
+                            nicknameError.textContent = updateResult.error || 'Failed to update nickname';
+                        }
+                    } else {
+                        nicknameEntry.style.display = 'none';
+                        alert('Keeping existing nickname.');
+                    }
+                    return;
+                }
+                
                 nicknameEntry.style.display = 'none';
                 
                 // Show feedback message
@@ -1025,8 +1284,10 @@ export class Game {
                     alert('🎉 Welcome to the leaderboard!');
                 } else if (result.improved) {
                     alert('✨ New high score! Your leaderboard entry has been updated!');
+                } else if (result.nicknameChanged) {
+                    alert('✅ Nickname updated successfully!');
                 } else {
-                    alert('Score submitted, but not better than your previous total score.');
+                    alert('No changes made.');
                 }
                 
                 this.showLeaderboard(); // Show full leaderboard sorted by total

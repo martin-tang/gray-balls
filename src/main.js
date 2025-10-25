@@ -24,6 +24,11 @@ window.addEventListener('DOMContentLoaded', () => {
                     gameInstance.currentLevel = window.selectedStartLevel;
                 }
                 
+                // Clear old level first to remove all assets
+                if (gameInstance.level) {
+                    gameInstance.level.clear();
+                }
+                
                 // Reload the level
                 gameInstance.level = new Level(
                     gameInstance.scene, 
@@ -37,7 +42,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 gameInstance.updateCameraLookDirection();
                 
                 // Show ball for new level
-                gameInstance.catapult.showBall();
+                if (gameInstance.catapult) {
+                    gameInstance.catapult.showBall();
+                } else {
+                    console.error('❌ Catapult not found after reinit!');
+                }
                 
                 // Show crosshair
                 const crosshair = document.getElementById('crosshair');

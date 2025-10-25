@@ -1559,7 +1559,23 @@ export class MedievalAssets {
     }
 
     removeAsset(asset) {
-        if (asset.mesh) this.scene.remove(asset.mesh);
+        // Properly dispose of Three.js resources to prevent memory leaks
+        if (asset.mesh) {
+            // Handle groups and single meshes
+            asset.mesh.traverse((child) => {
+                if (child.geometry) {
+                    child.geometry.dispose();
+                }
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            });
+            this.scene.remove(asset.mesh);
+        }
         if (asset.body) this.physicsWorld.removeBody(asset.body);
         const index = this.assets.indexOf(asset);
         if (index > -1) this.assets.splice(index, 1);

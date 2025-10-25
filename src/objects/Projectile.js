@@ -87,7 +87,7 @@ export class Projectile {
             shape: shape,
             position: new CANNON.Vec3(startPosition.x, startPosition.y, startPosition.z),
             material: this.physicsWorld.projectileMaterial,
-            linearDamping: 0.01,
+            linearDamping: 0.0,  // No air resistance - matches trajectory preview
             angularDamping: 0.01
         });
         

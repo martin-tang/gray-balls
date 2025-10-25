@@ -135,10 +135,14 @@ export class Target {
             mass: this.type === 'loot' ? 2 : 5,
             shape: geometry,
             position: new CANNON.Vec3(this.position.x, this.position.y, this.position.z),
-            material: this.physicsWorld.objectMaterial
+            material: this.physicsWorld.objectMaterial,
+            sleepSpeedLimit: 0.1, // Lower threshold for sleep
+            sleepTimeLimit: 0.1,   // Sleep faster
+            linearDamping: 0.01,   // Reduce bouncing
+            angularDamping: 0.01   // Reduce rotation
         });
         
-        // Prevent bouncing on spawn - set velocities to zero and put to sleep
+        // Freeze object immediately - no bouncing on spawn
         this.body.velocity.set(0, 0, 0);
         this.body.angularVelocity.set(0, 0, 0);
         this.body.sleep();
@@ -193,9 +197,24 @@ export class Target {
         // Create destruction effect (simple particles)
         this.createDestructionEffect();
         
-        // Remove from scene and physics
-        this.scene.remove(this.mesh);
-        this.physicsWorld.removeBody(this.body);
+        // Properly dispose of Three.js resources to prevent memory leaks
+        if (this.mesh) {
+            if (this.mesh.geometry) {
+                this.mesh.geometry.dispose();
+            }
+            if (this.mesh.material) {
+                if (Array.isArray(this.mesh.material)) {
+                    this.mesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.mesh.material.dispose();
+                }
+            }
+            this.scene.remove(this.mesh);
+        }
+        
+        if (this.body) {
+            this.physicsWorld.removeBody(this.body);
+        }
         
         return true;
     }

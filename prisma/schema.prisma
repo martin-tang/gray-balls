@@ -16,6 +16,7 @@ datasource db {
 model LeaderboardEntry {
   id              String   @id @default(cuid())
   nickname        String   @unique
+  deviceId        String   @unique
   totalScore      Float    @default(0)
   levelsCompleted Int      @default(0)
   createdAt       DateTime @default(now())
@@ -23,5 +24,6 @@ model LeaderboardEntry {
   
   @@index([totalScore])
   @@index([nickname])
+  @@index([deviceId])
 }
 

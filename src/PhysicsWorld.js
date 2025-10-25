@@ -6,6 +6,9 @@ export class PhysicsWorld {
             gravity: new CANNON.Vec3(0, -9.82, 0)
         });
         
+        // Enable sleeping for better performance and stability
+        this.world.allowSleep = true;
+        
         // Improve physics performance
         this.world.broadphase = new CANNON.NaiveBroadphase();
         this.world.solver.iterations = 10;
@@ -15,17 +18,27 @@ export class PhysicsWorld {
         this.objectMaterial = new CANNON.Material('object');
         this.projectileMaterial = new CANNON.Material('projectile');
         
-        // Define contact behavior
+        // Define contact behavior (restitution = 0 to prevent bouncing on spawn)
         const groundObjectContact = new CANNON.ContactMaterial(
             this.groundMaterial,
             this.objectMaterial,
-            { friction: 0.4, restitution: 0.3 }
+            { 
+                friction: 0.4, 
+                restitution: 0.01,  // Minimal bounce (was 0.3)
+                contactEquationStiffness: 1e8,
+                contactEquationRelaxation: 3
+            }
         );
         
         const projectileObjectContact = new CANNON.ContactMaterial(
             this.projectileMaterial,
             this.objectMaterial,
-            { friction: 0.3, restitution: 0.6 }
+            { 
+                friction: 0.3, 
+                restitution: 0.6,  // Some bounce for impact realism
+                contactEquationStiffness: 1e7,
+                contactEquationRelaxation: 3
+            }
         );
         
         this.world.addContactMaterial(groundObjectContact);
@@ -100,6 +113,21 @@ export class PhysicsWorld {
     
     removeBody(body) {
         this.world.removeBody(body);
+    }
+    
+    getBodyCount() {
+        return this.world.bodies.length;
+    }
+    
+    sleepAllBodies() {
+        // Force all bodies to sleep (useful after level load)
+        this.world.bodies.forEach(body => {
+            if (body.mass > 0 && body.type === CANNON.Body.DYNAMIC) {
+                body.velocity.set(0, 0, 0);
+                body.angularVelocity.set(0, 0, 0);
+                body.sleep();
+            }
+        });
     }
     
     createGroundBody() {

@@ -657,7 +657,7 @@
         <p id="nickname-score-display" style="font-size: 24px; margin-bottom: 30px;"></p>
         <div>
             <label style="font-size: 18px; display: block; margin-bottom: 10px;">Enter your nickname (3 letters):</label>
-            <input type="text" id="nickname-input" maxlength="3" style="font-size: 32px; padding: 15px; width: 200px; text-align: center; text-transform: uppercase; border: 3px solid #FFD700; border-radius: 10px; background: rgba(0,0,0,0.7); color: #FFD700; font-weight: bold;" />
+            <input type="text" id="nickname-input" maxlength="3" style="font-size: 32px; padding: 15px; width: 200px; text-align: center; border: 3px solid #FFD700; border-radius: 10px; background: rgba(0,0,0,0.7); color: #FFD700; font-weight: bold; letter-spacing: 8px;" />
             <div id="nickname-error" style="color: #FF6B6B; margin-top: 10px; min-height: 20px;"></div>
         </div>
         <div style="margin-top: 30px;">
@@ -933,6 +933,25 @@
             nicknameInput.value = '';
             nicknameError.textContent = '';
             nicknameEntry.style.display = 'block';
+            nicknameInput.focus();
+            
+            // Handle input validation - uppercase and filter non-letters
+            nicknameInput.oninput = () => {
+                const current = nicknameInput.value;
+                const filtered = current.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase();
+                
+                // Only update if changed to avoid cursor issues
+                if (filtered !== current) {
+                    const cursorPos = nicknameInput.selectionStart;
+                    nicknameInput.value = filtered;
+                    // Restore cursor position
+                    nicknameInput.setSelectionRange(filtered.length, filtered.length);
+                }
+                
+                if (nicknameError.textContent) {
+                    nicknameError.textContent = '';
+                }
+            };
             
             // Submit handler
             submitBtn.onclick = async () => {
@@ -948,23 +967,61 @@
                 submitBtn.textContent = 'Submitting...';
                 
                 try {
+                    // Get or create device ID
+                    const deviceId = getOrCreateDeviceId();
+                    
                     const apiUrl = document.querySelector('meta[name="api-url"]')?.content || 'http://localhost:3001';
                     const response = await fetch(`${apiUrl}/api/leaderboard`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nickname, totalScore, levelsCompleted })
+                        body: JSON.stringify({ nickname, totalScore, levelsCompleted, deviceId })
                     });
                     
                     const result = await response.json();
                     
                     if (result.success) {
+                        // Handle worse score scenario
+                        if (result.worseScore) {
+                            const confirmed = confirm(
+                                `This device has a higher score (${result.existingScore.toFixed(1)}) under "${result.existingNickname}".\n\n` +
+                                `Would you like to change that entry's nickname to "${nickname}"?`
+                            );
+                            
+                            if (confirmed) {
+                                // Update just the nickname
+                                const updateResponse = await fetch(`${apiUrl}/api/leaderboard/nickname`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId, newNickname: nickname })
+                                });
+                                
+                                const updateResult = await updateResponse.json();
+                                
+                                if (updateResult.success) {
+                                    nicknameEntry.style.display = 'none';
+                                    alert(`✅ ${updateResult.message}`);
+                                    showStandaloneLeaderboard();
+                                } else {
+                                    nicknameError.textContent = updateResult.error || 'Failed to update nickname';
+                                }
+                            } else {
+                                nicknameEntry.style.display = 'none';
+                                alert('Keeping existing nickname.');
+                            }
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = 'Submit';
+                            return;
+                        }
+                        
                         nicknameEntry.style.display = 'none';
                         if (result.newPlayer) {
                             alert('🎉 Welcome to the leaderboard!');
                         } else if (result.improved) {
                             alert('✨ New high score! Your leaderboard entry has been updated!');
+                        } else if (result.nicknameChanged) {
+                            alert('✅ Nickname updated successfully!');
                         } else {
-                            alert('Score submitted, but not better than your previous total score.');
+                            alert('No changes made.');
                         }
                         showStandaloneLeaderboard();
                     } else {
@@ -993,20 +1050,54 @@
             };
         }
         
+        // Device fingerprinting for unique device identification
+        function getOrCreateDeviceId() {
+            let deviceId = localStorage.getItem('castleCrasher_deviceId');
+            
+            if (!deviceId) {
+                // Create a fingerprint from browser characteristics
+                const nav = navigator;
+                const screen = window.screen;
+                const fingerprint = [
+                    nav.userAgent,
+                    nav.language,
+                    screen.colorDepth,
+                    screen.width + 'x' + screen.height,
+                    new Date().getTimezoneOffset(),
+                    !!window.sessionStorage,
+                    !!window.localStorage
+                ].join('|');
+                
+                // Generate a hash-like ID from the fingerprint + random component
+                deviceId = simpleHash(fingerprint) + '-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('castleCrasher_deviceId', deviceId);
+            }
+            
+            return deviceId;
+        }
+        
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash).toString(36);
+        }
+        
         // Expose standalone functions globally so game instance can use them too
         window.showStandaloneLeaderboard = showStandaloneLeaderboard;
         window.showStandaloneNicknameEntry = showStandaloneNicknameEntry;
+        window.getOrCreateDeviceId = getOrCreateDeviceId;
         
         // Clear progress button
         const clearProgressBtn = document.getElementById('clear-progress');
         clearProgressBtn.addEventListener('click', () => {
             const confirmed = confirm(
                 '⚠️ Are you sure you want to clear all progress?\n\n' +
-                'This will delete:\n' +
-                '• All completed levels\n' +
-                '• All high scores\n' +
-                '• All save data\n\n' +
-                'This action cannot be undone!'
+                'This will delete local data for this browser.' +
+                'Your score on the leaderboard will not be affected.'
             );
             
             if (confirmed) {

@@ -37,6 +37,7 @@ export class Building {
                 return 'wood';
             case 'tower':
             case 'wall':
+                return 'stone';
             case 'castle':
                 return 'stone';
             default:
@@ -152,10 +153,12 @@ export class Building {
                     mass: 50,
                     shape: new CANNON.Box(new CANNON.Vec3(2, 1.5, 2)),
                     position: new CANNON.Vec3(this.position.x, this.position.y + 1.5, this.position.z),
-                    material: this.physicsWorld.objectMaterial
+                    material: this.physicsWorld.objectMaterial,
+                    sleepSpeedLimit: 0.1, // Lower threshold for sleep
+                    sleepTimeLimit: 0.1    // Sleep faster
                 });
                 
-                // Prevent bouncing on spawn
+                // Freeze object immediately - no bouncing on spawn
                 this.body.velocity.set(0, 0, 0);
                 this.body.angularVelocity.set(0, 0, 0);
                 this.body.sleep();
@@ -190,10 +193,14 @@ export class Building {
             mass: mass,
             shape: physicsShape,
             position: new CANNON.Vec3(this.position.x, this.position.y, this.position.z),
-            material: this.physicsWorld.objectMaterial
+            material: this.physicsWorld.objectMaterial,
+            sleepSpeedLimit: 0.1, // Lower threshold for sleep
+            sleepTimeLimit: 0.1,   // Sleep faster
+            linearDamping: 0.01,   // Reduce bouncing
+            angularDamping: 0.01   // Reduce rotation
         });
         
-        // Prevent bouncing on spawn
+        // Freeze object immediately - no bouncing on spawn
         this.body.velocity.set(0, 0, 0);
         this.body.angularVelocity.set(0, 0, 0);
         this.body.sleep();
@@ -354,8 +361,25 @@ export class Building {
         console.log(`💀 ${this.buildingType} (${this.material}) destroyed!`);
         
         this.isDestroyed = true;
-        this.scene.remove(this.mesh);
-        this.physicsWorld.removeBody(this.body);
+        
+        // Properly dispose of Three.js resources to prevent memory leaks
+        if (this.mesh) {
+            if (this.mesh.geometry) {
+                this.mesh.geometry.dispose();
+            }
+            if (this.mesh.material) {
+                if (Array.isArray(this.mesh.material)) {
+                    this.mesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.mesh.material.dispose();
+                }
+            }
+            this.scene.remove(this.mesh);
+        }
+        
+        if (this.body) {
+            this.physicsWorld.removeBody(this.body);
+        }
     }
 }
 
