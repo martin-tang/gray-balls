@@ -1401,6 +1401,11 @@ export class Game {
         // Update level (targets and buildings)
         this.level.update(deltaTime);
         
+        // Update level creator (if active)
+        if (this.levelCreator && this.levelCreatorActive) {
+            this.levelCreator.update(deltaTime);
+        }
+        
         // Update projectiles
         this.projectiles.forEach(projectile => {
             projectile.update(deltaTime);

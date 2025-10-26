@@ -11,6 +11,7 @@ export class LevelCreator {
         this.currentTargetType = 'basic';
         this.gridSize = 1;
         this.ghostObject = null;
+        this.highlightMesh = null;
         this.baseX = 25;
         
         this.createUI();
@@ -89,11 +90,15 @@ export class LevelCreator {
                 <strong>Controls:</strong><br>
                 • Click list item to select<br>
                 • Ctrl+Click ground to place<br>
-                • Delete to remove selected<br>
+                • Delete/Backspace to remove<br>
                 • Arrow keys to move selected<br>
                 • PageUp/Down for height<br>
-                • G to toggle grid<br>
-                • C to clear all
+                • Q/E rotate Y (yaw) 15°<br>
+                • R/F rotate X (pitch) 15°<br>
+                • T/G rotate Z (roll) 15°<br>
+                • Shift for 45° rotation<br>
+                • H to toggle grid<br>
+                • Ctrl+C to clear all
             </div>
             
             <div style="margin-bottom: 10px;">
@@ -188,7 +193,9 @@ export class LevelCreator {
             
             if (!this.isActive) return;
             
-            if (e.key === 'Delete' && this.selectedObjectIndex !== null) {
+            // Support multiple delete key variations (Delete, Backspace, Del)
+            const isDeleteKey = e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Del';
+            if (isDeleteKey && this.selectedObjectIndex !== null) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('🗑️ Delete key pressed, selected index:', this.selectedObjectIndex);
@@ -203,7 +210,7 @@ export class LevelCreator {
                 return;
             }
             
-            if (e.key === 'g') {
+            if (e.key === 'h' || e.key === 'H') {
                 e.preventDefault();
                 e.stopPropagation();
                 // Toggle grid snap
@@ -219,7 +226,56 @@ export class LevelCreator {
                 
                 const moveSpeed = this.gridSize || 0.5;
                 let moved = false;
+                let rotated = false;
                 
+                // Initialize rotations if not set
+                if (obj.rotationX === undefined) obj.rotationX = 0;
+                if (obj.rotationY === undefined) obj.rotationY = obj.rotation || 0;
+                if (obj.rotationZ === undefined) obj.rotationZ = 0;
+                
+                // Rotation controls
+                const rotationStep = e.shiftKey ? Math.PI / 4 : Math.PI / 12; // 45° or 15°
+                
+                // Y-axis rotation (yaw) - Q/E
+                if (e.key === 'q' || e.key === 'Q') {
+                    e.preventDefault();
+                    obj.rotationY -= rotationStep;
+                    rotated = true;
+                }
+                if (e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                    obj.rotationY += rotationStep;
+                    rotated = true;
+                }
+                
+                // X-axis rotation (pitch) - R/F
+                if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault();
+                    obj.rotationX -= rotationStep;
+                    rotated = true;
+                }
+                if (e.key === 'f' || e.key === 'F') {
+                    e.preventDefault();
+                    obj.rotationX += rotationStep;
+                    rotated = true;
+                }
+                
+                // Z-axis rotation (roll) - T/G
+                if (e.key === 't' || e.key === 'T') {
+                    e.preventDefault();
+                    obj.rotationZ -= rotationStep;
+                    rotated = true;
+                }
+                if (e.key === 'g' || e.key === 'G') {
+                    e.preventDefault();
+                    obj.rotationZ += rotationStep;
+                    rotated = true;
+                }
+                
+                // Keep backward compatibility
+                obj.rotation = obj.rotationY;
+                
+                // Movement controls
                 if (e.key === 'ArrowLeft') {
                     e.preventDefault();
                     obj.position.x -= moveSpeed;
@@ -251,7 +307,16 @@ export class LevelCreator {
                     moved = true;
                 }
                 
-                if (moved) {
+                if (moved || rotated) {
+                    // Apply rotation to the game object
+                    if (rotated && obj.originalObject && obj.originalObject.mesh) {
+                        obj.originalObject.mesh.rotation.x = obj.rotationX;
+                        obj.originalObject.mesh.rotation.y = obj.rotationY;
+                        obj.originalObject.mesh.rotation.z = obj.rotationZ;
+                        if (obj.originalObject.body) {
+                            obj.originalObject.body.quaternion.setFromEuler(obj.rotationX, obj.rotationY, obj.rotationZ);
+                        }
+                    }
                     this.updateObjectsList();
                 }
             }
@@ -289,9 +354,17 @@ export class LevelCreator {
             console.log('🎨 Level Creator deactivated');
             document.removeEventListener('click', this.clickHandler);
             document.removeEventListener('keydown', this.keyHandler);
+            
+            // Remove ghost object
             if (this.ghostObject) {
                 this.game.scene.remove(this.ghostObject);
                 this.ghostObject = null;
+            }
+            
+            // Remove highlight
+            if (this.highlightMesh) {
+                this.game.scene.remove(this.highlightMesh);
+                this.highlightMesh = null;
             }
         }
     }
@@ -339,6 +412,9 @@ export class LevelCreator {
         if (this.game.level && this.game.level.buildings) {
             this.game.level.buildings.forEach(building => {
                 if (!building.isDestroyed) {
+                    const rotX = building.mesh ? building.mesh.rotation.x : 0;
+                    const rotY = building.mesh ? building.mesh.rotation.y : 0;
+                    const rotZ = building.mesh ? building.mesh.rotation.z : 0;
                     const obj = {
                         type: 'building',
                         subType: building.buildingType,
@@ -347,6 +423,10 @@ export class LevelCreator {
                             y: parseFloat(building.position.y.toFixed(1)),
                             z: parseFloat(building.position.z.toFixed(1))
                         },
+                        rotation: rotY, // Legacy
+                        rotationX: rotX,
+                        rotationY: rotY,
+                        rotationZ: rotZ,
                         imported: true,
                         originalObject: building
                     };
@@ -359,6 +439,9 @@ export class LevelCreator {
         if (this.game.level && this.game.level.targets) {
             this.game.level.targets.forEach(target => {
                 if (!target.isDestroyed) {
+                    const rotX = target.mesh ? target.mesh.rotation.x : 0;
+                    const rotY = target.mesh ? target.mesh.rotation.y : 0;
+                    const rotZ = target.mesh ? target.mesh.rotation.z : 0;
                     const obj = {
                         type: 'target',
                         subType: target.type,
@@ -367,6 +450,10 @@ export class LevelCreator {
                             y: parseFloat(target.position.y.toFixed(1)),
                             z: parseFloat(target.position.z.toFixed(1))
                         },
+                        rotation: rotY, // Legacy
+                        rotationX: rotX,
+                        rotationY: rotY,
+                        rotationZ: rotZ,
                         imported: true,
                         originalObject: target
                     };
@@ -459,6 +546,13 @@ export class LevelCreator {
                 snappedPos.z,
                 this.currentBuildingType
             );
+            // Apply default rotation
+            if (gameObject && gameObject.mesh) {
+                gameObject.mesh.rotation.y = 0;
+                if (gameObject.body) {
+                    gameObject.body.quaternion.setFromEuler(0, 0, 0);
+                }
+            }
         } else if (this.currentType === 'target') {
             // Create target using Level's addTarget method
             gameObject = this.game.level.addTarget(
@@ -467,6 +561,10 @@ export class LevelCreator {
                 snappedPos.z,
                 this.currentTargetType
             );
+            // Apply default rotation
+            if (gameObject && gameObject.mesh) {
+                gameObject.mesh.rotation.y = 0;
+            }
         }
         
         // Store the object data with reference to the game object
@@ -474,6 +572,10 @@ export class LevelCreator {
             type: this.currentType,
             subType: this.currentType === 'building' ? this.currentBuildingType : this.currentTargetType,
             position: snappedPos,
+            rotation: 0, // Legacy: same as rotationY
+            rotationX: 0,
+            rotationY: 0,
+            rotationZ: 0,
             imported: false,
             originalObject: gameObject
         };
@@ -560,6 +662,13 @@ export class LevelCreator {
         
         this.placedObjects.splice(this.selectedObjectIndex, 1);
         this.selectedObjectIndex = null;
+        
+        // Remove highlight
+        if (this.highlightMesh) {
+            this.game.scene.remove(this.highlightMesh);
+            this.highlightMesh = null;
+        }
+        
         this.updateObjectsList();
         
         console.log('✅ Object deleted, remaining objects:', this.placedObjects.length);
@@ -569,6 +678,13 @@ export class LevelCreator {
         if (confirm('Clear all placed objects?')) {
             this.placedObjects = [];
             this.selectedObjectIndex = null;
+            
+            // Remove highlight
+            if (this.highlightMesh) {
+                this.game.scene.remove(this.highlightMesh);
+                this.highlightMesh = null;
+            }
+            
             this.updateObjectsList();
         }
     }
@@ -580,6 +696,24 @@ export class LevelCreator {
             const icon = obj.type === 'building' ? '🏗️' : '🎯';
             const imported = obj.imported ? '📥 ' : '';
             const isSelected = i === this.selectedObjectIndex;
+            
+            // Build rotation string
+            const rotX = obj.rotationX || 0;
+            const rotY = obj.rotationY || obj.rotation || 0;
+            const rotZ = obj.rotationZ || 0;
+            const rotXDeg = Math.round((rotX * 180 / Math.PI) % 360);
+            const rotYDeg = Math.round((rotY * 180 / Math.PI) % 360);
+            const rotZDeg = Math.round((rotZ * 180 / Math.PI) % 360);
+            
+            let rotationStr = '';
+            if (rotXDeg !== 0 || rotYDeg !== 0 || rotZDeg !== 0) {
+                const parts = [];
+                if (rotXDeg !== 0) parts.push(`X:${rotXDeg}°`);
+                if (rotYDeg !== 0) parts.push(`Y:${rotYDeg}°`);
+                if (rotZDeg !== 0) parts.push(`Z:${rotZDeg}°`);
+                rotationStr = ` ↻${parts.join(' ')}`;
+            }
+            
             return `<div 
                 data-index="${i}"
                 style="
@@ -595,7 +729,7 @@ export class LevelCreator {
                 onmouseover="this.style.background='rgba(255,255,255,0.1)'"
                 onmouseout="this.style.background='${isSelected ? 'rgba(255, 215, 0, 0.2)' : 'transparent'}'"
             >
-                ${selected}${imported}${icon} ${obj.subType} @ (${obj.position.x.toFixed(1)}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)})
+                ${selected}${imported}${icon} ${obj.subType} @ (${obj.position.x.toFixed(1)}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)})${rotationStr}
             </div>`;
         }).join('');
         
@@ -614,8 +748,7 @@ export class LevelCreator {
                 
                 console.log(`🎯 Selected object ${index}: ${this.placedObjects[index].subType}`);
                 
-                // Update list to show selection (without calling highlightSelectedObject which causes re-render)
-                // Just update the visual state
+                // Update list to show selection
                 items.forEach(i => {
                     const idx = parseInt(i.getAttribute('data-index'));
                     const isSelected = idx === index;
@@ -623,6 +756,9 @@ export class LevelCreator {
                     i.style.color = isSelected ? '#FFD700' : '#fff';
                     i.style.borderLeft = isSelected ? '3px solid #FFD700' : '3px solid transparent';
                 });
+                
+                // Highlight the selected object in 3D scene
+                this.highlightSelectedObject();
             };
         });
         
@@ -631,8 +767,52 @@ export class LevelCreator {
     }
     
     highlightSelectedObject() {
-        // Disabled - brief highlight was interfering with selection
-        // Selection now only shown in the list UI
+        // Remove existing highlight
+        if (this.highlightMesh) {
+            this.game.scene.remove(this.highlightMesh);
+            this.highlightMesh = null;
+        }
+        
+        // If no selection, return
+        if (this.selectedObjectIndex === null) return;
+        
+        const obj = this.placedObjects[this.selectedObjectIndex];
+        if (!obj || !obj.originalObject || !obj.originalObject.mesh) return;
+        
+        const selectedMesh = obj.originalObject.mesh;
+        
+        // Create a highlight box/outline around the selected object
+        const box = new THREE.Box3().setFromObject(selectedMesh);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        
+        // Create a slightly larger wireframe box
+        const padding = 0.2;
+        const highlightGeometry = new THREE.BoxGeometry(
+            size.x + padding,
+            size.y + padding,
+            size.z + padding
+        );
+        
+        const highlightMaterial = new THREE.MeshBasicMaterial({
+            color: 0xFFD700, // Gold color
+            wireframe: true,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        this.highlightMesh = new THREE.Mesh(highlightGeometry, highlightMaterial);
+        this.highlightMesh.position.copy(center);
+        
+        // Match rotation of the selected object
+        this.highlightMesh.rotation.x = obj.rotationX || 0;
+        this.highlightMesh.rotation.y = obj.rotationY || obj.rotation || 0;
+        this.highlightMesh.rotation.z = obj.rotationZ || 0;
+        
+        // Add pulsing animation
+        this.highlightMesh.userData.pulseTime = 0;
+        
+        this.game.scene.add(this.highlightMesh);
     }
     
     syncImportedObjects() {
@@ -662,6 +842,31 @@ export class LevelCreator {
         });
     }
     
+    update(deltaTime) {
+        // Animate highlight with pulsing effect
+        if (this.highlightMesh) {
+            this.highlightMesh.userData.pulseTime += deltaTime * 3; // Pulse speed
+            const pulse = Math.sin(this.highlightMesh.userData.pulseTime) * 0.5 + 0.5; // 0 to 1
+            this.highlightMesh.material.opacity = 0.5 + pulse * 0.4; // Pulse between 0.5 and 0.9
+            
+            // Update position and rotation if object was moved/rotated
+            if (this.selectedObjectIndex !== null) {
+                const obj = this.placedObjects[this.selectedObjectIndex];
+                if (obj && obj.originalObject && obj.originalObject.mesh) {
+                    const selectedMesh = obj.originalObject.mesh;
+                    const box = new THREE.Box3().setFromObject(selectedMesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    this.highlightMesh.position.copy(center);
+                    
+                    // Update all rotation axes
+                    this.highlightMesh.rotation.x = obj.rotationX || 0;
+                    this.highlightMesh.rotation.y = obj.rotationY || obj.rotation || 0;
+                    this.highlightMesh.rotation.z = obj.rotationZ || 0;
+                }
+            }
+        }
+    }
+    
     exportLevel() {
         if (this.placedObjects.length === 0) {
             alert('No objects to export!');
@@ -678,22 +883,45 @@ export class LevelCreator {
         
         if (buildings.length > 0) {
             code += `        // Buildings\n`;
-            buildings.forEach(obj => {
+            buildings.forEach((obj, idx) => {
                 const x = obj.position.x === this.baseX ? 'baseX' : 
                          obj.position.x > this.baseX ? `baseX + ${(obj.position.x - this.baseX).toFixed(1)}` :
                          `baseX - ${(this.baseX - obj.position.x).toFixed(1)}`;
-                code += `        this.addBuilding(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                
+                const rotX = obj.rotationX || 0;
+                const rotY = obj.rotationY || obj.rotation || 0;
+                const rotZ = obj.rotationZ || 0;
+                const hasRotation = Math.abs(rotX) > 0.01 || Math.abs(rotY) > 0.01 || Math.abs(rotZ) > 0.01;
+                
+                if (hasRotation) {
+                    code += `        const building${idx} = this.addBuilding(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                    code += `        building${idx}.mesh.rotation.set(${rotX.toFixed(3)}, ${rotY.toFixed(3)}, ${rotZ.toFixed(3)});\n`;
+                    code += `        if (building${idx}.body) building${idx}.body.quaternion.setFromEuler(${rotX.toFixed(3)}, ${rotY.toFixed(3)}, ${rotZ.toFixed(3)});\n`;
+                } else {
+                    code += `        this.addBuilding(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                }
             });
             code += '\n';
         }
         
         if (targets.length > 0) {
             code += `        // Targets\n`;
-            targets.forEach(obj => {
+            targets.forEach((obj, idx) => {
                 const x = obj.position.x === this.baseX ? 'baseX' : 
                          obj.position.x > this.baseX ? `baseX + ${(obj.position.x - this.baseX).toFixed(1)}` :
                          `baseX - ${(this.baseX - obj.position.x).toFixed(1)}`;
-                code += `        this.addTarget(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                
+                const rotX = obj.rotationX || 0;
+                const rotY = obj.rotationY || obj.rotation || 0;
+                const rotZ = obj.rotationZ || 0;
+                const hasRotation = Math.abs(rotX) > 0.01 || Math.abs(rotY) > 0.01 || Math.abs(rotZ) > 0.01;
+                
+                if (hasRotation) {
+                    code += `        const target${idx} = this.addTarget(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                    code += `        target${idx}.mesh.rotation.set(${rotX.toFixed(3)}, ${rotY.toFixed(3)}, ${rotZ.toFixed(3)});\n`;
+                } else {
+                    code += `        this.addTarget(${x}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)}, '${obj.subType}');\n`;
+                }
             });
         }
         
